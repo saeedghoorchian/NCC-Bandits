@@ -1,0 +1,6 @@
+dataset/*
+.ipynb_checkpoints/*
+experiments/.ipynb_checkpoints/*
+.DS_Store
+__pycache__/*
+*.pickle
