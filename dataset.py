@@ -1,6 +1,7 @@
 import numpy as np
 import fileinput
 from dataclasses import dataclass
+import random
 
 
 @dataclass
@@ -19,6 +20,7 @@ class Event:
 
 class Dataset:
     """Wrapper class for Yahoo! Front Page Today Module User Click Log Dataset R6"""
+
     def __init__(self):
         self.articles: list[int] = []
         self.features: list[float] = []
@@ -26,19 +28,25 @@ class Dataset:
         self.n_arms: int = 0
         self.n_events: int = 0
 
-    def fill_yahoo_events(self, filenames: list[str]):
+    def fill_yahoo_events(self, filenames: list[str], filtered_ids: list[str], subsample_percentage: float = 1.0):
         """
         Reads a stream of events from the list of given files.
 
         Args:
-            filenames (list): List of filenames.
+            filenames: List of filenames.
+            filtered_ids: Article ids to be filtered out of the data.
+            subsample_percentage: which portion of data to subsample.
         """
+
+        assert 0.0 <= subsample_percentage <= 1.0, f"Subsample percentage is {subsample_percentage}" \
+                                                   f"should be in [0.0; 1.0] range.'"
 
         self.articles = []
         self.features = []
         self.events = []
 
         skipped = 0
+        skipped_no_articles = 0
 
         with fileinput.input(files=filenames) as f:
             for line in f:
@@ -48,32 +56,49 @@ class Dataset:
                     skipped += 1
                     continue
 
+                if random.random() > subsample_percentage:
+                    continue
+
                 pool_idx = []
                 pool_ids = []
 
-                # First column is timestamp.
-                # Second column is displayed article id.
-                # Third column is 1 for click and 0 for no click.
+                timestamp = int(cols[0])
+
+                displayed_article_id = cols[1]
+                if displayed_article_id in filtered_ids:
+                    continue
+
+                user_click = int(cols[2])  # 1 for click, 0 for no click
+
                 # Next 7 columns are "|user <user_feature_1> ... <user_feature_6>"
                 # Each <user_feature_i> looks like this "i:0.000012"
+                user_features = [float(x[2:]) for x in cols[4:10]]
 
                 # After the first 10 columns are the articles and their features.
                 # Each article has 7 columns (article id preceeded by | and 6 features.
                 for i in range(10, len(cols) - 6, 7):
                     # First symbol is "|"
                     id = cols[i][1:]
+                    if id in filtered_ids:
+                        continue
                     if id not in self.articles:
                         self.articles.append(id)
                         self.features.append([float(x[2:]) for x in cols[i + 1: i + 7]])
                     pool_idx.append(self.articles.index(id))
                     pool_ids.append(id)
 
+                if len(pool_idx) <= 1:
+                    # print("\n\n\nWARNING!\n\n\nYour strict filtering led to some"
+                          # f"events having not enough articles to choose from, event number {len(self.events)}")
+                    skipped_no_articles += 1
+                    continue
+
                 self.events.append(
                     Event(
-                        timestamp=int(cols[0]),
-                        displayed_pool_index=pool_ids.index(cols[1]),
-                        user_click=int(cols[2]),
-                        user_features=[float(x[2:]) for x in cols[4:10]],
+                        timestamp=timestamp,
+                        displayed_pool_index=pool_ids.index(displayed_article_id),
+                        user_click=user_click,
+                        user_features=user_features,
                         pool_indexes=pool_idx,
                     )
                 )
@@ -81,8 +106,10 @@ class Dataset:
         self.n_arms = len(self.articles)
         self.n_events = len(self.events)
         print(self.n_events, "events with", self.n_arms, "articles, from files ", filenames)
-        if skipped != 0:
-            print("Skipped events:", skipped)
+        if skipped:
+            print(f"Skipped events: {skipped}"), skipped
+        if skipped_no_articles:
+            print(f"Skipped events because of no arms to choose from {skipped_no_articles}")
 
     def get_article_average_ctr(self, article_index: int, average_over: int) -> tuple:
         """Get average click through rate for one article in the dataset.
