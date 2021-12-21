@@ -8,7 +8,7 @@ def evaluate(
         bandit_algorithm,
         dataset: dataset_module.Dataset,
         feature_costs: costs.BaseCosts = costs.ZeroCosts(),
-        stop_after: int =None,
+        stop_after: int = None,
 ) -> list:
     """
     Function to evaluate a bandit algorithm using user click log data in an offline manner.
