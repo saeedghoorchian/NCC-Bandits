@@ -1,17 +1,18 @@
 import abc
 import numpy as np
+from typing import List
 
 
 class BaseCosts(metaclass=abc.ABCMeta):
     """This class simulates feature costs"""
 
     @abc.abstractmethod
-    def get_cost_of_features(self, observed_indexes: list[int]) -> float:
+    def get_cost_of_features(self, observed_indexes: List[int]) -> float:
         pass
 
 
 class ZeroCosts(BaseCosts):
-    def get_cost_of_features(self, observed_indexes: list[int]) -> float:
+    def get_cost_of_features(self, observed_indexes: List[int]) -> float:
         return 0.0
 
 
@@ -30,7 +31,7 @@ class BernoulliCosts(BaseCosts):
             "All parameters must have same size"
         )
 
-    def get_cost_of_features(self, observed_indexes: list[int]) -> float:
+    def get_cost_of_features(self, observed_indexes: List[int]) -> float:
         total_cost = 0.0
         for ind in observed_indexes:
             p = self.probabilities[ind]

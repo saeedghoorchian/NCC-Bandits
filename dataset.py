@@ -2,6 +2,7 @@ import numpy as np
 import fileinput
 from dataclasses import dataclass
 import random
+from typing import List
 
 
 @dataclass
@@ -22,14 +23,14 @@ class Dataset:
     """Wrapper class for Yahoo! Front Page Today Module User Click Log Dataset R6A and R6B"""
 
     def __init__(self):
-        self.articles: list[int] = []
-        self.article_features: list[float] = []
-        self.events: list[Event] = []
+        self.articles: List[int] = []
+        self.article_features: List[float] = []
+        self.events: List[Event] = []
         self.n_arms: int = 0
         self.n_events: int = 0
 
     def fill_yahoo_events_first_version_r6a(
-            self, filenames: list[str], filtered_ids: list[str] = (), subsample_percentage: float = 1.0
+            self, filenames: List[str], filtered_ids: List[str] = (), subsample_percentage: float = 1.0
     ):
         """
         Reads and saves a stream of events from the list of given data files for R6A version.
@@ -116,7 +117,7 @@ class Dataset:
             print(f"Skipped events because of no arms to choose from {skipped_no_articles}")
 
     def fill_yahoo_events_second_version_r6b(
-            self, filenames: list[str], filtered_ids: list[str] = (), subsample_percentage: float = 1.0
+            self, filenames: List[str], filtered_ids: List[str] = (), subsample_percentage: float = 1.0
     ):
         """
         Reads and saves a stream of events from the list of given data files for R6B version.
