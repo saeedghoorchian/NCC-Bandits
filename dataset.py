@@ -19,18 +19,22 @@ class Event:
 
 
 class Dataset:
-    """Wrapper class for Yahoo! Front Page Today Module User Click Log Dataset R6"""
+    """Wrapper class for Yahoo! Front Page Today Module User Click Log Dataset R6A and R6B"""
 
     def __init__(self):
         self.articles: list[int] = []
-        self.features: list[float] = []
+        self.article_features: list[float] = []
         self.events: list[Event] = []
         self.n_arms: int = 0
         self.n_events: int = 0
 
-    def fill_yahoo_events(self, filenames: list[str], filtered_ids: list[str], subsample_percentage: float = 1.0):
+    def fill_yahoo_events_first_version_r6a(
+            self, filenames: list[str], filtered_ids: list[str] = (), subsample_percentage: float = 1.0
+    ):
         """
-        Reads a stream of events from the list of given files.
+        Reads and saves a stream of events from the list of given data files for R6A version.
+        In this version user features are 6-dim float vectors.
+        Also articles have features.
 
         Args:
             filenames: List of filenames.
@@ -42,7 +46,7 @@ class Dataset:
                                                    f"should be in [0.0; 1.0] range.'"
 
         self.articles = []
-        self.features = []
+        self.article_features = []
         self.events = []
 
         skipped = 0
@@ -83,7 +87,7 @@ class Dataset:
                         continue
                     if id not in self.articles:
                         self.articles.append(id)
-                        self.features.append([float(x[2:]) for x in cols[i + 1: i + 7]])
+                        self.article_features.append([float(x[2:]) for x in cols[i + 1: i + 7]])
                     pool_idx.append(self.articles.index(id))
                     pool_ids.append(id)
 
@@ -102,7 +106,98 @@ class Dataset:
                         pool_indexes=pool_idx,
                     )
                 )
-        self.features = np.array(self.features)
+        self.article_features = np.array(self.article_features)
+        self.n_arms = len(self.articles)
+        self.n_events = len(self.events)
+        print(self.n_events, "events with", self.n_arms, "articles, from files ", filenames)
+        if skipped:
+            print(f"Skipped events: {skipped}"), skipped
+        if skipped_no_articles:
+            print(f"Skipped events because of no arms to choose from {skipped_no_articles}")
+
+    def fill_yahoo_events_second_version_r6b(
+            self, filenames: list[str], filtered_ids: list[str] = (), subsample_percentage: float = 1.0
+    ):
+        """
+        Reads and saves a stream of events from the list of given data files for R6B version.
+        In this version user features are 136-dim binary vectors.
+
+        Args:
+            filenames: List of filenames.
+            filtered_ids: Article ids to be filtered out of the data.
+            subsample_percentage: which portion of data to subsample.
+        """
+
+        assert 0.0 <= subsample_percentage <= 1.0, f"Subsample percentage is {subsample_percentage}" \
+                                                   f"should be in [0.0; 1.0] range.'"
+
+        USER_FEATURE_VECTOR_SIZE = 136
+        self.articles = []
+        self.article_features = []
+        self.events = []
+
+        skipped = 0
+        skipped_no_articles = 0
+
+        with fileinput.input(files=filenames) as f:
+            for line in f:
+                cols = line.split()
+
+                if random.random() > subsample_percentage:
+                    continue
+
+                timestamp = int(cols[0])
+
+                displayed_article_id = cols[1]
+                if displayed_article_id in filtered_ids:
+                    continue
+
+                user_click = int(cols[2])  # 1 for click, 0 for no click
+
+                # Next n (n unknown) columns are "|user 1 9 11 13 23 16 18 1 ...
+                # Where each number is index of 1 in a binary feature vector.
+                user_features = np.zeros(USER_FEATURE_VECTOR_SIZE, dtype=np.int8)
+                column_index = 4
+                while not cols[column_index].startswith("|id"):
+                    # Indexes are starting with 1 in data
+                    ind = int(cols[column_index]) - 1
+                    user_features[ind] = 1
+                    column_index += 1
+
+                # After the user features there is pool of article ids.
+                # Each article-id has form "|id-552077
+
+                pool_idx = []
+                pool_ids = []
+
+                for i in range(column_index, len(cols)):
+                    # First symbol is "|"
+                    id = cols[i][1:]
+                    if id in filtered_ids:
+                        continue
+                    if id not in self.articles:
+                        self.articles.append(id)
+
+                    pool_idx.append(self.articles.index(id))
+                    pool_ids.append(id)
+
+                if len(pool_idx) <= 1:
+                    # print("\n\n\nWARNING!\n\n\nYour strict filtering led to some"
+                    # f"events having not enough articles to choose from, event number {len(self.events)}")
+                    skipped_no_articles += 1
+                    continue
+
+                self.events.append(
+                    Event(
+                        timestamp=timestamp,
+                        displayed_pool_index=pool_ids.index(displayed_article_id),
+                        user_click=user_click,
+                        user_features=user_features,
+                        pool_indexes=pool_idx,
+                    )
+                )
+
+        self.article_features = np.array(self.article_features)
         self.n_arms = len(self.articles)
         self.n_events = len(self.events)
         print(self.n_events, "events with", self.n_arms, "articles, from files ", filenames)
