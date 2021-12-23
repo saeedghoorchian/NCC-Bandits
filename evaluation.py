@@ -1,5 +1,5 @@
 import time
-import cupy as np
+import numpy as np
 
 import costs
 import dataset as dataset_module
