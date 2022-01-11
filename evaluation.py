@@ -61,7 +61,7 @@ def evaluate(
             trial += 1
             total_reward += (event.user_click - feature_costs.get_total_cost_of_features(features_to_observe, trial))
             bandit_algorithm.update(
-                event.displayed_pool_index, event.user_click, observed_features, event.pool_indexes
+                trial, event.displayed_pool_index, event.user_click, observed_features, event.pool_indexes
             )
             ctr.append(total_reward / trial)
             # TODO save event timestamp together with ctr for clearer explanation of results.
