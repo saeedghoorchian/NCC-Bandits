@@ -73,11 +73,11 @@ class LinUCB:
         self.n_arms = n_arms
 
         # Vertical array of size n_arms. Each element is a matrix d x d. One matrix for each arm.
-        self.A = np.array([np.identity(context_dimension)] * n_arms)
+        self.A = np.array([np.identity(context_dimension)] * n_arms, dtype=np.float32)
         # Same, shape is(n_arms, context_dimension, context_dimension)
-        self.A_inv = np.array([np.identity(context_dimension)] * n_arms)
+        self.A_inv = np.array([np.identity(context_dimension)] * n_arms, dtype=np.float32)
         # Vertical array of size n_arms, each element is vector of size d x 1
-        self.b = np.zeros((n_arms, context_dimension, 1))
+        self.b = np.zeros((n_arms, context_dimension, 1), dtype=np.float32)
 
     def choose_arm(self, trial, context, pool_indexes):
         """Return best arm's index relative to the pool.
@@ -141,15 +141,15 @@ class PSLinUCB:
         self.context_dimension = context_dimension
 
         # Vertical arrays of size n_arms. Each element is a matrix d x d. One matrix for each arm.
-        self.A_pre = np.array([np.identity(context_dimension)] * n_arms)
-        self.A_cur = np.array([np.identity(context_dimension)] * n_arms)
-        self.A_cum = np.array([np.identity(context_dimension)] * n_arms)
+        self.A_pre = np.array([np.identity(context_dimension)] * n_arms, dtype=np.float32)
+        self.A_cur = np.array([np.identity(context_dimension)] * n_arms, dtype=np.float32)
+        self.A_cum = np.array([np.identity(context_dimension)] * n_arms, dtype=np.float32)
         # Same, shape is(n_arms, context_dimension, context_dimension)
-        self.A_cum_inv = np.array([np.identity(context_dimension)] * n_arms)
+        self.A_cum_inv = np.array([np.identity(context_dimension)] * n_arms, dtype=np.float32)
         # Vertical arrays of size n_arms, each element is vector of size d x 1
-        self.b_pre = np.zeros((n_arms, context_dimension, 1))
-        self.b_cur = np.zeros((n_arms, context_dimension, 1))
-        self.b_cum = np.zeros((n_arms, context_dimension, 1))
+        self.b_pre = np.zeros((n_arms, context_dimension, 1), dtype=np.float32)
+        self.b_cur = np.zeros((n_arms, context_dimension, 1), dtype=np.float32)
+        self.b_cum = np.zeros((n_arms, context_dimension, 1), dtype=np.float32)
 
         # Sliding window for each arm.
         self.SW = [collections.deque() for _ in range(n_arms)]
