@@ -78,6 +78,8 @@ class LinUCB:
         self.A_inv = np.array([np.identity(context_dimension)] * n_arms, dtype=np.float32)
         # Vertical array of size n_arms, each element is vector of size d x 1
         self.b = np.zeros((n_arms, context_dimension, 1), dtype=np.float32)
+        # Vertical array of size n_arms, each element is vector of size d x 1
+        self.theta = np.zeros((n_arms, context_dimension, 1), dtype=np.float32)
 
     def choose_arm(self, trial, context, pool_indexes):
         """Return best arm's index relative to the pool.
@@ -88,12 +90,10 @@ class LinUCB:
         # Take only subset of arms relevant to this trial (only some arms are shown at each event).
         n_pool = len(pool_indexes)
         A_inv = self.A_inv[pool_indexes]
-        b = self.b[pool_indexes]
+        theta = self.theta[pool_indexes]
 
         x = np.array([context] * n_pool)  # Broadcast context vector (same for each arm), shape (n_pool, d)
         x = x.reshape(n_pool, self.context_dimension, 1)  # Shape is now (n_pool, d, 1) so for each arm (d,1) vector.
-
-        theta = A_inv @ b  # One theta vector (d x 1) for each arm. (n_pool, d, 1)
 
         theta_T = np.transpose(theta, axes=(0, 2, 1))  # (n_pool, 1, d)
         estimated_reward = theta_T @ x  # (n_pool, 1, 1)
@@ -113,7 +113,9 @@ class LinUCB:
 
         self.A[chosen_arm_index] += x @ x.T
         self.b[chosen_arm_index] += reward * x
+        # Precompute inverse of A and theta, as arm update happens less often them arm choosing.
         self.A_inv[chosen_arm_index] = np.linalg.inv(self.A[chosen_arm_index])
+        self.theta[chosen_arm_index] = self.A_inv[chosen_arm_index] @ self.b[chosen_arm_index]
 
     def choose_features_to_observe(self, trial, feature_indexes):
         # LinUCB has no feature selection so it uses all available features.
@@ -150,6 +152,7 @@ class PSLinUCB:
         self.b_pre = np.zeros((n_arms, context_dimension, 1), dtype=np.float32)
         self.b_cur = np.zeros((n_arms, context_dimension, 1), dtype=np.float32)
         self.b_cum = np.zeros((n_arms, context_dimension, 1), dtype=np.float32)
+        self.theta_cum = np.zeros((n_arms, context_dimension, 1), dtype=np.float32)
 
         # Sliding window for each arm.
         self.SW = [collections.deque() for _ in range(n_arms)]
@@ -167,12 +170,10 @@ class PSLinUCB:
         # Take only subset of arms relevant to this trial (only some arms are shown at each event).
         n_pool = len(pool_indexes)
         A_cum_inv = self.A_cum_inv[pool_indexes]
-        b_cum = self.b_cum[pool_indexes]
+        theta_cum = self.theta_cum[pool_indexes]  # One theta vector (d x 1) for each arm. (n_pool, d, 1)
 
         x = np.array([context] * n_pool)  # Broadcast context vector (same for each arm), shape (n_pool, d)
         x = x.reshape(n_pool, self.context_dimension, 1)  # Shape is now (n_pool, d, 1) so for each arm (d,1) vector.
-
-        theta_cum = A_cum_inv @ b_cum  # One theta vector (d x 1) for each arm. (n_pool, d, 1)
 
         theta_cum_T = np.transpose(theta_cum, axes=(0, 2, 1))  # (n_pool, 1, d)
         estimated_reward = theta_cum_T @ x  # (n_pool, 1, 1)
@@ -236,8 +237,9 @@ class PSLinUCB:
                 self.b_pre[chosen_arm_index] += r_1 * x_1
                 self.b_cur[chosen_arm_index] -= r_1 * x_1
 
-        # Precompute the inverse here to reduce the number of matrix inversions.
+        # Precompute the inverse and theta here to reduce the number of matrix operations.
         self.A_cum_inv[chosen_arm_index] = np.linalg.inv(self.A_cum[chosen_arm_index])
+        self.theta_cum[chosen_arm_index] = self.A_cum_inv[chosen_arm_index] @ self.b_cum[chosen_arm_index]
 
     def choose_features_to_observe(self, trial, feature_indexes):
         # LinUCB has no feature selection so it uses all available features.
