@@ -6,7 +6,7 @@ import pickle
 import time
 import sys
 
-sys.path.append('../../')
+sys.path.append("../../")
 
 import algorithms, evaluation
 
@@ -36,7 +36,7 @@ def run_ps_linucb(params):
             n_arms=data.n_arms,
             alpha=alpha,
             omega=omega,
-            delta=delta
+            delta=delta,
         )
         ctr_pslinucb = evaluation.evaluate(ps_linucb, data, stop_after=NUM_OF_TRIALS)
         param_str = f"PS-LinUCB a={alpha} o={omega} d={delta}"
@@ -44,7 +44,7 @@ def run_ps_linucb(params):
     return param_str, ctr_pslinucb
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with open("../../dataset/r6b/subsample/data_10.pickle", "rb") as f:
         gc.disable()
         data = pickle.load(f)
@@ -60,8 +60,8 @@ if __name__ == '__main__':
             for delta in deltas:
                 params.append((data, alpha, delta, omega))
 
-    with timer('Total pool map'):
+    with timer("Total pool map"):
         pool = mp.Pool()
         results = pool.map(run_ps_linucb, params)
-    with open('tuning_results.pickle', 'wb') as f:
+    with open("tuning_results.pickle", "wb") as f:
         pickle.dump(results, f)

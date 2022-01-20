@@ -12,6 +12,7 @@ class Event:
     At every timestamp 1 article is displayed to the user.
     Bandit algorithm has to choose from a pool of articles available at this timestamp.
     """
+
     timestamp: int
     displayed_pool_index: int  # index of article relative to the pool (which article from pool was chosen)
     user_click: int  # 1 if clicked, 0 otherwise
@@ -30,7 +31,10 @@ class Dataset:
         self.n_events: int = 0
 
     def fill_yahoo_events_first_version_r6a(
-            self, filenames: List[str], filtered_ids: List[str] = (), subsample_percentage: float = 1.0
+        self,
+        filenames: List[str],
+        filtered_ids: List[str] = (),
+        subsample_percentage: float = 1.0,
     ):
         """
         Reads and saves a stream of events from the list of given data files for R6A version.
@@ -43,8 +47,10 @@ class Dataset:
             subsample_percentage: which portion of data to subsample.
         """
 
-        assert 0.0 <= subsample_percentage <= 1.0, f"Subsample percentage is {subsample_percentage}" \
-                                                   f"should be in [0.0; 1.0] range.'"
+        assert 0.0 <= subsample_percentage <= 1.0, (
+            f"Subsample percentage is {subsample_percentage}"
+            f"should be in [0.0; 1.0] range.'"
+        )
 
         self.articles = []
         self.article_features = []
@@ -88,13 +94,15 @@ class Dataset:
                         continue
                     if id not in self.articles:
                         self.articles.append(id)
-                        self.article_features.append([float(x[2:]) for x in cols[i + 1: i + 7]])
+                        self.article_features.append(
+                            [float(x[2:]) for x in cols[i + 1 : i + 7]]
+                        )
                     pool_idx.append(self.articles.index(id))
                     pool_ids.append(id)
 
                 if len(pool_idx) <= 1:
                     # print("\n\n\nWARNING!\n\n\nYour strict filtering led to some"
-                          # f"events having not enough articles to choose from, event number {len(self.events)}")
+                    # f"events having not enough articles to choose from, event number {len(self.events)}")
                     skipped_no_articles += 1
                     continue
 
@@ -110,14 +118,25 @@ class Dataset:
         self.article_features = np.array(self.article_features)
         self.n_arms = len(self.articles)
         self.n_events = len(self.events)
-        print(self.n_events, "events with", self.n_arms, "articles, from files ", filenames)
+        print(
+            self.n_events,
+            "events with",
+            self.n_arms,
+            "articles, from files ",
+            filenames,
+        )
         if skipped:
             print(f"Skipped events: {skipped}"), skipped
         if skipped_no_articles:
-            print(f"Skipped events because of no arms to choose from {skipped_no_articles}")
+            print(
+                f"Skipped events because of no arms to choose from {skipped_no_articles}"
+            )
 
     def fill_yahoo_events_second_version_r6b(
-            self, filenames: List[str], filtered_ids: List[str] = (), subsample_percentage: float = 1.0
+        self,
+        filenames: List[str],
+        filtered_ids: List[str] = (),
+        subsample_percentage: float = 1.0,
     ):
         """
         Reads and saves a stream of events from the list of given data files for R6B version.
@@ -129,8 +148,10 @@ class Dataset:
             subsample_percentage: which portion of data to subsample.
         """
 
-        assert 0.0 <= subsample_percentage <= 1.0, f"Subsample percentage is {subsample_percentage}" \
-                                                   f"should be in [0.0; 1.0] range.'"
+        assert 0.0 <= subsample_percentage <= 1.0, (
+            f"Subsample percentage is {subsample_percentage}"
+            f"should be in [0.0; 1.0] range.'"
+        )
 
         USER_FEATURE_VECTOR_SIZE = 136
         self.articles = []
@@ -201,11 +222,19 @@ class Dataset:
         self.article_features = np.array(self.article_features)
         self.n_arms = len(self.articles)
         self.n_events = len(self.events)
-        print(self.n_events, "events with", self.n_arms, "articles, from files ", filenames)
+        print(
+            self.n_events,
+            "events with",
+            self.n_arms,
+            "articles, from files ",
+            filenames,
+        )
         if skipped:
             print(f"Skipped events: {skipped}"), skipped
         if skipped_no_articles:
-            print(f"Skipped events because of no arms to choose from {skipped_no_articles}")
+            print(
+                f"Skipped events because of no arms to choose from {skipped_no_articles}"
+            )
 
     def get_article_average_ctr(self, article_index: int, average_over: int) -> tuple:
         """Get average click through rate for one article in the dataset.
@@ -214,7 +243,8 @@ class Dataset:
             tuple(list of ctrs, list of timestamps): average click through rates and corresponding timestamps.
         """
         art_events = [
-            ev for ev in self.events
+            ev
+            for ev in self.events
             if ev.pool_indexes[ev.displayed_pool_index] == article_index
         ]
 

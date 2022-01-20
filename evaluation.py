@@ -4,11 +4,12 @@ import numpy as np
 import costs
 import dataset as dataset_module
 
+
 def evaluate(
-        bandit_algorithm,
-        dataset: dataset_module.Dataset,
-        feature_costs: costs.BaseCosts = costs.ZeroCosts(),
-        stop_after: int = None,
+    bandit_algorithm,
+    dataset: dataset_module.Dataset,
+    feature_costs: costs.BaseCosts = costs.ZeroCosts(),
+    stop_after: int = None,
 ) -> list:
     """
     Function to evaluate a bandit algorithm using user click log data in an offline manner.
@@ -40,7 +41,9 @@ def evaluate(
 
     start = time.time()
     total_reward = 0  # cumulative reward
-    trial = 0  # counter of valid events (when chosen arm was same as displayed in log data)
+    trial = (
+        0  # counter of valid events (when chosen arm was same as displayed in log data)
+    )
 
     ctr = []  # contains ctr for each trial
 
@@ -51,17 +54,27 @@ def evaluate(
         features_to_observe = bandit_algorithm.choose_features_to_observe(
             trial, feature_indexes=list(range(len(event.user_features)))
         )
-        observed_features = np.array([
-            feature if index in features_to_observe else None
-            for index, feature in enumerate(event.user_features)
-        ])
+        observed_features = np.array(
+            [
+                feature if index in features_to_observe else None
+                for index, feature in enumerate(event.user_features)
+            ]
+        )
 
-        chosen = bandit_algorithm.choose_arm(trial, observed_features, event.pool_indexes)
+        chosen = bandit_algorithm.choose_arm(
+            trial, observed_features, event.pool_indexes
+        )
         if chosen == event.displayed_pool_index:
             trial += 1
-            total_reward += (event.user_click - feature_costs.get_total_cost_of_features(features_to_observe, trial))
+            total_reward += event.user_click - feature_costs.get_total_cost_of_features(
+                features_to_observe, trial
+            )
             bandit_algorithm.update(
-                trial, event.displayed_pool_index, event.user_click, observed_features, event.pool_indexes
+                trial,
+                event.displayed_pool_index,
+                event.user_click,
+                observed_features,
+                event.pool_indexes,
             )
             ctr.append(total_reward / trial)
             # TODO save event timestamp together with ctr for clearer explanation of results.

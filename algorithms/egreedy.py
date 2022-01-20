@@ -1,15 +1,15 @@
 import numpy as np
+from typing import List
 
 
 class EpsilonGreedy:
-
-    def __init__(self, epsilon, total_n_arms):
+    def __init__(self, n_arms: int, epsilon: float):
         self.epsilon = epsilon
         self.name = f"E-greedy(epsilon={epsilon})"
-        self.q = np.zeros(total_n_arms)  # estimated reward for each arm
-        self.n = np.zeros(total_n_arms)  # total number of times an arm was drawn
+        self.q = np.zeros(n_arms)  # estimated reward for each arm
+        self.n = np.zeros(n_arms)  # total number of times an arm was drawn
 
-    def choose_arm(self, trial, context, pool_indexes):
+    def choose_arm(self, trial: int, context: List[float], pool_indexes: List[int]):
         """
         Returns best arm's index relative to the pool
         """
@@ -19,9 +19,17 @@ class EpsilonGreedy:
         else:
             return np.random.randint(low=0, high=len(pool_indexes))
 
-    def update(self, trial, displayed_article_index, reward, context, pool_indexes):
+    def update(
+        self,
+        trial: int,
+        displayed_article_index: int,
+        reward: int,
+        context: List[float],
+        pool_indexes: List[int],
+    ):
         """
-        Updates algorithm's parameters(matrices) : A,b
+        Updates algorithm's parameters after seeing reward.
+
         Parameters
         ----------
         trial :
@@ -29,7 +37,7 @@ class EpsilonGreedy:
         displayed_article_index :
             displayed article index relative to the pool
         reward :
-            user clicked or not
+            user clicked or not (0 or 1)
         context :
             user features
         pool_indexes :

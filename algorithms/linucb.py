@@ -13,7 +13,9 @@ class LinUCB:
         # Vertical array of size n_arms. Each element is a matrix d x d. One matrix for each arm.
         self.A = np.array([np.identity(context_dimension)] * n_arms, dtype=np.float32)
         # Same, shape is(n_arms, context_dimension, context_dimension)
-        self.A_inv = np.array([np.identity(context_dimension)] * n_arms, dtype=np.float32)
+        self.A_inv = np.array(
+            [np.identity(context_dimension)] * n_arms, dtype=np.float32
+        )
         # Vertical array of size n_arms, each element is vector of size d x 1
         self.b = np.zeros((n_arms, context_dimension, 1), dtype=np.float32)
         # Vertical array of size n_arms, each element is vector of size d x 1
@@ -30,8 +32,12 @@ class LinUCB:
         A_inv = self.A_inv[pool_indexes]
         theta = self.theta[pool_indexes]
 
-        x = np.array([context] * n_pool)  # Broadcast context vector (same for each arm), shape (n_pool, d)
-        x = x.reshape(n_pool, self.context_dimension, 1)  # Shape is now (n_pool, d, 1) so for each arm (d,1) vector.
+        x = np.array(
+            [context] * n_pool
+        )  # Broadcast context vector (same for each arm), shape (n_pool, d)
+        x = x.reshape(
+            n_pool, self.context_dimension, 1
+        )  # Shape is now (n_pool, d, 1) so for each arm (d,1) vector.
 
         theta_T = np.transpose(theta, axes=(0, 2, 1))  # (n_pool, 1, d)
         estimated_reward = theta_T @ x  # (n_pool, 1, 1)
@@ -47,13 +53,17 @@ class LinUCB:
         """Update the parameters of the model after each trial."""
         chosen_arm_index = pool_indexes[displayed_article_index]
 
-        x = context.reshape((self.context_dimension, 1))  # Turn 1-dimensional context vector into (d,1) matrix
+        x = context.reshape(
+            (self.context_dimension, 1)
+        )  # Turn 1-dimensional context vector into (d,1) matrix
 
         self.A[chosen_arm_index] += x @ x.T
         self.b[chosen_arm_index] += reward * x
         # Precompute inverse of A and theta, as arm update happens less often them arm choosing.
         self.A_inv[chosen_arm_index] = np.linalg.inv(self.A[chosen_arm_index])
-        self.theta[chosen_arm_index] = self.A_inv[chosen_arm_index] @ self.b[chosen_arm_index]
+        self.theta[chosen_arm_index] = (
+            self.A_inv[chosen_arm_index] @ self.b[chosen_arm_index]
+        )
 
     def choose_features_to_observe(self, trial, feature_indexes):
         # LinUCB has no feature selection so it uses all available features.
