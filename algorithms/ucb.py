@@ -9,7 +9,7 @@ class UCB1:
     """
 
     def __init__(self, n_arms: int, alpha: float):
-        self.alpha = round(alpha, 2)
+        self.alpha = alpha
         self.name = f"UCB1 (α={self.alpha})"
 
         self.q = np.zeros(n_arms)  # average reward for each arm

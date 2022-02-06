@@ -6,7 +6,7 @@ class LinUCB:
         self.context_dimension = context_dimension
         # alpha parameter controls how large the ucb is, larger alpha means more exploration
         assert alpha > 0.0, "Alpha parameter must be positive"
-        self.alpha = round(alpha, 2)
+        self.alpha = alpha
         self.name = f"LinUCB (alpha={self.alpha}"
         self.n_arms = n_arms
 

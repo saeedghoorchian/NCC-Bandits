@@ -21,7 +21,7 @@ class PSLinUCB:
         self.context_dimension = context_dimension
         # alpha parameter controls how large the ucb is, larger alpha means more exploration
         assert alpha > 0.0, "Alpha parameter must be positive"
-        self.alpha = round(alpha, 2)
+        self.alpha = alpha
         assert omega > 0, "Omega parameter must be positive"
         self.omega = omega
         assert delta > 0.0, "Delta parameter must be positive"
