@@ -17,7 +17,7 @@ class Event:
     displayed_pool_index: int  # index of article relative to the pool (which article from pool was chosen)
     user_click: int  # 1 if clicked, 0 otherwise
     user_features: list
-    pool_indexes: list  # Which articles were available at (not article id, but number of arm)
+    pool_indices: list  # Which articles were available at (not article id, but number of arm)
 
 
 class Dataset:
@@ -112,7 +112,7 @@ class Dataset:
                         displayed_pool_index=pool_ids.index(displayed_article_id),
                         user_click=user_click,
                         user_features=user_features,
-                        pool_indexes=pool_idx,
+                        pool_indices=pool_idx,
                     )
                 )
         self.article_features = np.array(self.article_features)
@@ -181,7 +181,7 @@ class Dataset:
                 user_features = np.zeros(USER_FEATURE_VECTOR_SIZE, dtype=np.int8)
                 column_index = 4
                 while not cols[column_index].startswith("|id"):
-                    # Indexes are starting with 1 in data
+                    # indices are starting with 1 in data
                     ind = int(cols[column_index]) - 1
                     user_features[ind] = 1
                     column_index += 1
@@ -215,7 +215,7 @@ class Dataset:
                         displayed_pool_index=pool_ids.index(displayed_article_id),
                         user_click=user_click,
                         user_features=user_features,
-                        pool_indexes=pool_idx,
+                        pool_indices=pool_idx,
                     )
                 )
 
@@ -245,7 +245,7 @@ class Dataset:
         art_events = [
             ev
             for ev in self.events
-            if ev.pool_indexes[ev.displayed_pool_index] == article_index
+            if ev.pool_indices[ev.displayed_pool_index] == article_index
         ]
 
         num = 0

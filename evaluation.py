@@ -52,7 +52,7 @@ def evaluate(
     for event in events:
 
         features_to_observe = bandit_algorithm.choose_features_to_observe(
-            trial, feature_indexes=list(range(len(event.user_features)))
+            trial, feature_indices=list(range(len(event.user_features)))
         )
         observed_features = np.array(
             [
@@ -62,7 +62,7 @@ def evaluate(
         )
 
         chosen = bandit_algorithm.choose_arm(
-            trial, observed_features, event.pool_indexes
+            trial, observed_features, event.pool_indices
         )
         if chosen == event.displayed_pool_index:
             trial += 1
@@ -74,7 +74,7 @@ def evaluate(
                 event.displayed_pool_index,
                 event.user_click,
                 observed_features,
-                event.pool_indexes,
+                event.pool_indices,
             )
             ctr.append(total_reward / trial)
             # TODO save event timestamp together with ctr for clearer explanation of results.

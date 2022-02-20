@@ -7,7 +7,7 @@ class LinUCB:
         # alpha parameter controls how large the ucb is, larger alpha means more exploration
         assert alpha > 0.0, "Alpha parameter must be positive"
         self.alpha = alpha
-        self.name = f"LinUCB (alpha={self.alpha}"
+        self.name = f"LinUCB (alpha={self.alpha})"
         self.n_arms = n_arms
 
         # Vertical array of size n_arms. Each element is a matrix d x d. One matrix for each arm.
@@ -21,16 +21,16 @@ class LinUCB:
         # Vertical array of size n_arms, each element is vector of size d x 1
         self.theta = np.zeros((n_arms, context_dimension, 1), dtype=np.float32)
 
-    def choose_arm(self, trial, context, pool_indexes):
+    def choose_arm(self, trial, context, pool_indices):
         """Return best arm's index relative to the pool.
 
         This method uses vectorized implementation of LinUCB algorithm.
         Comments should help understand the dimensions.
         """
         # Take only subset of arms relevant to this trial (only some arms are shown at each event).
-        n_pool = len(pool_indexes)
-        A_inv = self.A_inv[pool_indexes]
-        theta = self.theta[pool_indexes]
+        n_pool = len(pool_indices)
+        A_inv = self.A_inv[pool_indices]
+        theta = self.theta[pool_indices]
 
         x = np.array(
             [context] * n_pool
@@ -49,9 +49,9 @@ class LinUCB:
 
         return np.argmax(score)
 
-    def update(self, trial, displayed_article_index, reward, context, pool_indexes):
+    def update(self, trial, displayed_article_index, reward, context, pool_indices):
         """Update the parameters of the model after each trial."""
-        chosen_arm_index = pool_indexes[displayed_article_index]
+        chosen_arm_index = pool_indices[displayed_article_index]
 
         x = context.reshape(
             (self.context_dimension, 1)
@@ -65,6 +65,6 @@ class LinUCB:
             self.A_inv[chosen_arm_index] @ self.b[chosen_arm_index]
         )
 
-    def choose_features_to_observe(self, trial, feature_indexes):
+    def choose_features_to_observe(self, trial, feature_indices):
         # LinUCB has no feature selection so it uses all available features.
-        return feature_indexes
+        return feature_indices

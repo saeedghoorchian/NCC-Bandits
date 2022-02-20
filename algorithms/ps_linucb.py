@@ -57,7 +57,7 @@ class PSLinUCB:
 
         self.change_points = []
 
-    def choose_arm(self, trial, context, pool_indexes):
+    def choose_arm(self, trial, context, pool_indices):
         """Return best arm's index relative to the pool.
 
         This part of algorithm is similar to LinUCB, for each arm all observations since the last
@@ -66,10 +66,10 @@ class PSLinUCB:
         Comments should help understand the dimensions.
         """
         # Take only subset of arms relevant to this trial (only some arms are shown at each event).
-        n_pool = len(pool_indexes)
-        A_cum_inv = self.A_cum_inv[pool_indexes]
+        n_pool = len(pool_indices)
+        A_cum_inv = self.A_cum_inv[pool_indices]
         theta_cum = self.theta_cum[
-            pool_indexes
+            pool_indices
         ]  # One theta vector (d x 1) for each arm. (n_pool, d, 1)
 
         x = np.array(
@@ -91,9 +91,9 @@ class PSLinUCB:
 
         return np.argmax(score)
 
-    def update(self, trial, displayed_article_index, reward, context, pool_indexes):
+    def update(self, trial, displayed_article_index, reward, context, pool_indices):
         """Update the parameters of the model after each trial."""
-        chosen_arm_index = pool_indexes[displayed_article_index]
+        chosen_arm_index = pool_indices[displayed_article_index]
 
         x = context.reshape(
             (self.context_dimension, 1)
@@ -155,6 +155,6 @@ class PSLinUCB:
             self.A_cum_inv[chosen_arm_index] @ self.b_cum[chosen_arm_index]
         )
 
-    def choose_features_to_observe(self, trial, feature_indexes):
+    def choose_features_to_observe(self, trial, feature_indices):
         # PS-LinUCB has no feature selection so it uses all available features.
-        return feature_indexes
+        return feature_indices
