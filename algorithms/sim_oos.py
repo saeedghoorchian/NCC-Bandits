@@ -61,7 +61,11 @@ class SimOOSAlgorithm:
         return all_feature_types, s_o
 
     def state_extract(self, all_feature_types, context_at_t, observation_action_at_t):
-        """The idea is to number the different states"""
+        """The idea is to number the different states
+
+        context_at_t may contain None values at those indices where observation_action_at_t is 0 - these are
+        not observed features.
+        """
         org_dim_context = context_at_t.shape[0]
         all_feature_types_tilde = np.ones(org_dim_context)
         number_of_observations_at_t = np.dot(observation_action_at_t, np.ones(org_dim_context))
@@ -79,8 +83,8 @@ class SimOOSAlgorithm:
 
         else:
             for i in range(org_dim_context):
-                state = state + all_feature_types_tilde[i] * (context_at_t[i] - 1) * observation_action_at_t[i]
-
+                if observation_action_at_t[i]:
+                    state = state + all_feature_types_tilde[i] * (context_at_t[i] - 1)
         state = int(state)
 
         return state
@@ -240,7 +244,7 @@ class SimOOSAlgorithm:
 
         self.new_round = 0  # New round initialized, no new round needed.
 
-    def choose_features_to_observe(self, t, cost_vector):
+    def choose_features_to_observe(self, t, feature_indices, cost_vector):
         if t < self.number_of_perms_SimOOS:
             # First go through all subsets of features once.
             self.observation_action_at_t = self.all_perms[t]
@@ -249,7 +253,7 @@ class SimOOSAlgorithm:
             if self.new_round == 1:
                 self.initialize_new_round(t, cost_vector)
             self.observation_action_at_t = self.selected_observation_action_at_t
-        return self.observation_action_at_t
+        return [ind for ind, value in enumerate(self.observation_action_at_t) if value]
 
     def choose_arm(self, t: int, context_at_t: np.array, pool_indices: list):
         """Return best arm's index relative to the pool of available arms.
@@ -290,9 +294,10 @@ class SimOOSAlgorithm:
 
         return pool_indices.index(self.action_at_t)
 
-    def update(self, t, action_at_t, reward_at_t, cost_at_t, context_at_t, observation_action_at_t):
+    def update(self, t, action_index_at_t, reward_at_t, cost_at_t, context_at_t, pool_indices):
+        action_at_t = pool_indices[action_index_at_t]
 
-        s_t = self.state_extract(self.all_feature_types, context_at_t, observation_action_at_t)
+        s_t = self.state_extract(self.all_feature_types, context_at_t, self.observation_action_at_t)
 
         if t < self.number_of_perms_SimOOS:
             # Random Source Selection Part
@@ -309,7 +314,7 @@ class SimOOSAlgorithm:
             # Moreover, each observation is seen only once.
             self.N_t_as[action_at_t, s_t] = self.N_t_as[action_at_t, s_t] + 1
 
-            self.selected_context_SimOOS[t, :] = context_at_t
+            self.selected_context_SimOOS[t, :] = np.array([c if c is not None else 0 for c in context_at_t])
 
         else:
             # Optimistic Policy Optimization
@@ -351,16 +356,26 @@ def run_new_SimOOS(all_contexts, all_rewards, max_no_red_context, beta_SimOOS, c
         delta_SimOOS=delta_SimOOS,
     )
 
-    pool_indices = list(range(all_rewards.shape[1]))
+    pool_indices = list(range(1, all_rewards.shape[1]))
 
     for t in range(alg.time_horizon):
         context_at_t = all_contexts[t, :]
-        observation_action_at_t = alg.choose_features_to_observe(t, cost_vector)
-        action_index_at_t = alg.choose_arm(t, context_at_t, pool_indices)
+        feature_indices = [ind for ind, c in enumerate(context_at_t)]
+        features_to_observe = alg.choose_features_to_observe(t, feature_indices, cost_vector)
+
+        observed_context_at_t = np.array(
+            [
+                feature if index in features_to_observe else None
+                for index, feature in enumerate(context_at_t)
+            ]
+        )
+
+        action_index_at_t = alg.choose_arm(t, observed_context_at_t, pool_indices)
         action_at_t = pool_indices[action_index_at_t]
         reward_at_t = all_rewards[t, action_at_t]
-        cost_at_t = np.dot(observation_action_at_t, cost_vector)
-        alg.update(t, action_at_t, reward_at_t, cost_at_t, context_at_t, observation_action_at_t)
+        cost_at_t = np.sum(c for ind, c in enumerate(cost_vector) if ind in features_to_observe)
+
+        alg.update(t, action_index_at_t, reward_at_t, cost_at_t, observed_context_at_t, pool_indices)
 
     average_gain_SimOOS = alg.all_gain_SimOOS[1:alg.time_horizon + 1] / np.arange(1, alg.time_horizon + 1)
 

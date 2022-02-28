@@ -65,6 +65,6 @@ class LinUCB:
             self.A_inv[chosen_arm_index] @ self.b[chosen_arm_index]
         )
 
-    def choose_features_to_observe(self, trial, feature_indices):
+    def choose_features_to_observe(self, trial, feature_indices, cost_vector):
         # LinUCB has no feature selection so it uses all available features.
         return feature_indices

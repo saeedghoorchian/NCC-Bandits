@@ -10,6 +10,9 @@ class BaseCosts(metaclass=abc.ABCMeta):
     def get_one_feature_cost(self, index: int, trial: int):
         pass
 
+    def get_full_cost_vector(self, trial: int, feature_indices: List[int]) -> list:
+        return [self.get_one_feature_cost(ind, trial) for ind in feature_indices]
+
     def get_total_cost_of_features(
         self, observed_indices: List[int], trial: int
     ) -> float:

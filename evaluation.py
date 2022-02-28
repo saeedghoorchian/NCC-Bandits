@@ -51,8 +51,12 @@ def evaluate(
 
     for event in events:
 
+        # Next trial is considered because trial is incremented later. So we get costs for trial that will
+        # happen if algorithm chooses the same arm as in log data.
+        cost_vector = feature_costs.get_full_cost_vector(trial+1, feature_indices=list(range(len(event.user_features))))
+
         features_to_observe = bandit_algorithm.choose_features_to_observe(
-            trial, feature_indices=list(range(len(event.user_features)))
+            trial, feature_indices=list(range(len(event.user_features))), cost_vector=cost_vector,
         )
         observed_features = np.array(
             [

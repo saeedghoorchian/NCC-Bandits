@@ -14,5 +14,5 @@ class RandomPolicy:
     def update(self, trial, displayed_article_index, reward, context, pool_indices):
         pass
 
-    def choose_features_to_observe(self, trial, feature_indices):
+    def choose_features_to_observe(self, trial, feature_indices, cost_vector):
         return feature_indices
