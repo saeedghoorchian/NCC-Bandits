@@ -11,7 +11,7 @@ class RandomPolicy:
         """
         return np.random.randint(low=0, high=len(pool_indices))
 
-    def update(self, trial, displayed_article_index, reward, context, pool_indices):
+    def update(self, trial, displayed_article_index, reward, cost, context, pool_indices):
         pass
 
     def choose_features_to_observe(self, trial, feature_indices, cost_vector):

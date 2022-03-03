@@ -28,6 +28,21 @@ class ZeroCosts(BaseCosts):
         return 0.0
 
 
+class ConstantCosts(BaseCosts):
+    def __init__(self, feature_vector_size: int, cost_values: List[float]):
+        self.feature_vector_size = feature_vector_size
+        self.cost_values = cost_values
+
+    def get_one_feature_cost(self, index: int, trial: int):
+        return self.cost_values[index]
+
+    def get_separate_costs(self, trial):
+        costs = []
+        for i in range(self.feature_vector_size):
+            costs.append(self.get_one_feature_cost(i, trial))
+        return costs
+
+
 class BernoulliCosts(BaseCosts):
     """Class for Bernoulli feature costs"""
 

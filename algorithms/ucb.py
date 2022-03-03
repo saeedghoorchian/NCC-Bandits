@@ -25,7 +25,7 @@ class UCB1:
         )
         return np.argmax(ucbs)
 
-    def update(self, trial, displayed_article_index, reward, context, pool_indices):
+    def update(self, trial, displayed_article_index, reward, cost, context, pool_indices):
         """
         Updates algorithm's parameters: q, n
         """

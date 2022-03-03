@@ -70,13 +70,15 @@ def evaluate(
         )
         if chosen == event.displayed_pool_index:
             trial += 1
-            total_reward += event.user_click - feature_costs.get_total_cost_of_features(
+            cost_at_t = feature_costs.get_total_cost_of_features(
                 features_to_observe, trial
             )
+            total_reward += event.user_click - cost_at_t
             bandit_algorithm.update(
                 trial,
                 event.displayed_pool_index,
                 event.user_click,
+                cost_at_t,
                 observed_features,
                 event.pool_indices,
             )

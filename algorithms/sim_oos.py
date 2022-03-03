@@ -8,10 +8,25 @@ import cvxpy as cp
 
 class SimOOSAlgorithm:
 
+    def full_perm_construct(self, size: int) -> np.array:
+        all_perms = np.zeros((2 ** size, size))
+
+        for i in range(2 ** size):
+            bin_str = np.binary_repr(i, width=size)
+            bin_arr = np.fromstring(bin_str, 'u1') - ord('0')
+            all_perms[i, :] = bin_arr
+
+        return all_perms
+
     def perm_construct(self, org_dim_context: int, max_no_red_context: int) -> np.array:
         """Computes all possible observation actions(permutations) for org_dim_context sources(features) and max_no_red_context
          max_no_red_context is the maximum number of sources that can be selected.
         """
+
+        # If all permutations are needed - a quicker procedure is available.
+        if org_dim_context == max_no_red_context:
+            return self.full_perm_construct(org_dim_context)
+
         for i in range(0, max_no_red_context + 1):
 
             temp1 = np.array([1 for j in range(i)])
@@ -112,6 +127,8 @@ class SimOOSAlgorithm:
                  beta_SimOOS: float,
                  delta_SimOOS: float
                  ):
+
+        self.name = f"SimOOS (beta={beta_SimOOS}, delta={delta_SimOOS})"
 
         self.time_horizon = all_contexts.shape[0]
         self.org_dim_context = all_contexts.shape[1]

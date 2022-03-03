@@ -91,7 +91,7 @@ class PSLinUCB:
 
         return np.argmax(score)
 
-    def update(self, trial, displayed_article_index, reward, context, pool_indices):
+    def update(self, trial, displayed_article_index, reward, cost, context, pool_indices):
         """Update the parameters of the model after each trial."""
         chosen_arm_index = pool_indices[displayed_article_index]
 
