@@ -1,6 +1,7 @@
 import itertools
 import math
 import random
+import datetime
 
 import numpy as np
 import cvxpy as cp
@@ -48,7 +49,7 @@ class SimOOSAlgorithm:
 
     def state_construct(self, all_contexts: np.array, one_perm: np.array) -> tuple:
         """
-        s_o : number of states that can be reached by taking observation action o
+        s_o : number of states that can be reached by taking observation action one_perm
         all_contexts : context matrix
         one_perm : observation action
         all_feature_types[i] : number of possible i-type context values
@@ -75,7 +76,7 @@ class SimOOSAlgorithm:
 
         return all_feature_types, s_o
 
-    def state_extract(self, all_feature_types, context_at_t, observation_action_at_t):
+    def state_extract(self, t,  all_feature_types, context_at_t, observation_action_at_t):
         """The idea is to number the different states
 
         context_at_t may contain None values at those indices where observation_action_at_t is 0 - these are
@@ -169,6 +170,7 @@ class SimOOSAlgorithm:
         # Define the counters and variables
         # a - action, s - state (partial vector), o - observation (subset of features)
         self.r_hat_t = np.zeros((self.number_of_actions, self.s_o_max_SimOOS, self.number_of_perms_SimOOS))
+        self.conf1_t = np.zeros((self.number_of_actions, self.s_o_max_SimOOS, self.number_of_perms_SimOOS))
         self.N_t_aso = np.zeros((self.number_of_actions, self.s_o_max_SimOOS, self.number_of_perms_SimOOS))
         self.N_t_o = np.zeros(self.number_of_perms_SimOOS)
         self.N_t_os = np.zeros((self.number_of_perms_SimOOS, self.s_o_max_SimOOS))
@@ -204,8 +206,13 @@ class SimOOSAlgorithm:
 
         self.new_round = 1  # so that it can run at the beginning
 
-    def initialize_new_round(self, t, cost_vector):
+        self.ucbs = np.zeros((self.time_horizon + 1, self.number_of_actions))
+        self.rewards = np.zeros((self.time_horizon + 1, self.number_of_actions))
+        self.confidences = np.zeros((self.time_horizon + 1, self.number_of_actions))
 
+    def initialize_new_round(self, t, cost_vector):
+        if t % 500 == 0:
+            print(f"Round {t}, time {datetime.datetime.now()}")
         for i in range(self.number_of_perms_SimOOS):
 
             if i == 0:
@@ -218,11 +225,15 @@ class SimOOSAlgorithm:
 
                     if self.N_t_aso[k, j, i] == 0:
                         self.upsilon_t[k, j, i] = 1  # min(1, !) = 1
+                        confidence_interval_1 = 0
                     else:
                         confidence_interval_1 = min(1, math.sqrt(
                             math.log((20 * self.s_o_total_SimOOS * self.number_of_actions * (t ** 5)) / self.delta_SimOOS) / (
                                     2 * self.N_t_aso[k, j, i])))
                         self.upsilon_t[k, j, i] = self.r_hat_t[k, j, i] + confidence_interval_1
+                    # if t == 106:
+                    #     print(f"s_t: {j} obs: {i}, confidence: {confidence_interval_1}")
+                    self.conf1_t[k, j, i] = confidence_interval_1
 
                 F[i].append(np.max(self.upsilon_t[:, j, i]))
 
@@ -282,12 +293,12 @@ class SimOOSAlgorithm:
         """
         if t < self.number_of_perms_SimOOS:
             # Random Source Selection Part
-            self.action_at_t = random.choice(pool_indices)
+            self.action_at_t = np.random.choice(pool_indices)
         else:
             # Optimistic Policy Optimization
-            s_t = self.state_extract(self.all_feature_types, context_at_t, self.observation_action_at_t)
+            s_t = self.state_extract(t, self.all_feature_types, context_at_t, self.observation_action_at_t)
 
-            # If some of the actions have been chosen yet - choose them.
+            # If some of the actions have not been chosen yet - choose them.
             action_at_t_temp = np.argwhere(
                 self.N_t_aso[:, s_t, self.index_of_observation_action_at_t] == 0
             )
@@ -308,13 +319,20 @@ class SimOOSAlgorithm:
                     raise ValueError(f"No action found at time {t}, something went wrong.")
 
             self.action_at_t = int(action_at_t)
+            self.ucbs[t] = self.upsilon_t[:, s_t, self.index_of_observation_action_at_t]
+            self.rewards[t] = self.r_hat_t[:, s_t, self.index_of_observation_action_at_t]
+            # if t == 106:
+            #     print(s_t)
+            #     print(self.index_of_observation_action_at_t)
+            #     print(self.conf1_t[:, s_t, self.index_of_observation_action_at_t])
+            self.confidences[t] = self.conf1_t[:, s_t, self.index_of_observation_action_at_t]
 
         return pool_indices.index(self.action_at_t)
 
     def update(self, t, action_index_at_t, reward_at_t, cost_at_t, context_at_t, pool_indices):
         action_at_t = pool_indices[action_index_at_t]
 
-        s_t = self.state_extract(self.all_feature_types, context_at_t, self.observation_action_at_t)
+        s_t = self.state_extract(t, self.all_feature_types, context_at_t, self.observation_action_at_t)
 
         if t < self.number_of_perms_SimOOS:
             # Random Source Selection Part

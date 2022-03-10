@@ -15,4 +15,4 @@ class RandomPolicy:
         pass
 
     def choose_features_to_observe(self, trial, feature_indices, cost_vector):
-        return feature_indices
+        return []

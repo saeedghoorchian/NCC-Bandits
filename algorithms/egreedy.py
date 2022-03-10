@@ -24,6 +24,7 @@ class EpsilonGreedy:
         trial: int,
         displayed_article_index: int,
         reward: int,
+        cost: List[float],
         context: List[float],
         pool_indices: List[int],
     ):
@@ -50,4 +51,4 @@ class EpsilonGreedy:
         self.q[a] += (reward - self.q[a]) / self.n[a]
 
     def choose_features_to_observe(self, trial, feature_indices, cost_vector):
-        return feature_indices
+        return []
