@@ -1,3 +1,4 @@
+from algorithms.alg1 import Algorithm1
 from algorithms.egreedy import EpsilonGreedy
 from algorithms.linucb import LinUCB
 from algorithms.ps_linucb import PSLinUCB

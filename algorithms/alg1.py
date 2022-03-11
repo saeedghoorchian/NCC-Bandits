@@ -1,13 +1,12 @@
 import itertools
 import math
-import random
 import datetime
 
 import numpy as np
 import cvxpy as cp
 
 
-class SimOOSAlgorithm:
+class Algorithm1:
 
     def full_perm_construct(self, size: int) -> np.array:
         all_perms = np.zeros((2 ** size, size))
@@ -105,22 +104,6 @@ class SimOOSAlgorithm:
 
         return state
 
-    def isroundover(self, N_old, N):
-        """Checks whether the round is ended.
-
-        flag = 1 - round is over, flag = 0 - round is not over.
-        """
-        flag = 0
-
-        for j in range(N_old.shape[2]):  # if for a perm j=o
-            for i in range(N_old.shape[1]):  # if for a state s=i
-                for k in range(N_old.shape[0]):  # if for an action a=k
-
-                    if (int(N[k, i, j].item(0)) <= N_old[k, i, j]) and (int(N_old[k, i, j].item(0)) > 0):
-                        flag = 1
-
-        return flag
-
     def __init__(self,
                  all_contexts: np.array,
                  number_of_actions: int,
@@ -129,7 +112,7 @@ class SimOOSAlgorithm:
                  delta_SimOOS: float
                  ):
 
-        self.name = f"SimOOS (beta={beta_SimOOS}, delta={delta_SimOOS})"
+        self.name = f"Algorithm1 (beta={beta_SimOOS}, delta={delta_SimOOS})"
 
         self.time_horizon = all_contexts.shape[0]
         self.org_dim_context = all_contexts.shape[1]
@@ -215,7 +198,7 @@ class SimOOSAlgorithm:
     def initialize_new_round(self, t, cost_vector):
         self.rounds += 1
         if t % 500 == 0:
-            print(f"Trial {t}, time {datetime.datetime.now()}")
+            print(f"Round {t}, time {datetime.datetime.now()}")
         for i in range(self.number_of_perms_SimOOS):
 
             if i == 0:
@@ -367,7 +350,7 @@ class SimOOSAlgorithm:
                 self.index_of_observation_action_at_t]
             self.N_t_as[action_at_t, s_t] += 1
 
-            self.new_round = self.isroundover(self.N_old_aso, self.N_t_aso)
+            self.new_round = 1
 
             self.selected_context_SimOOS[t, :] = self.selected_observation_action_at_t
 
