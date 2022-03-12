@@ -329,7 +329,10 @@ class SimOOSAlgorithm:
 
         return pool_indices.index(self.action_at_t)
 
-    def update(self, t, action_index_at_t, reward_at_t, cost_at_t, context_at_t, pool_indices):
+    def update(self, t, action_index_at_t, reward_at_t, cost_vector_at_t, context_at_t, pool_indices):
+
+        cost_at_t = np.dot(cost_vector_at_t, self.observation_action_at_t)
+
         action_at_t = pool_indices[action_index_at_t]
 
         s_t = self.state_extract(t, self.all_feature_types, context_at_t, self.observation_action_at_t)

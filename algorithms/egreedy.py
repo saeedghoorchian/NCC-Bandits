@@ -24,7 +24,7 @@ class EpsilonGreedy:
         trial: int,
         displayed_article_index: int,
         reward: int,
-        cost: List[float],
+        cost_vector: List[float],
         context: List[float],
         pool_indices: List[int],
     ):

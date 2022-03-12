@@ -78,7 +78,7 @@ def evaluate(
                 trial,
                 event.displayed_pool_index,
                 event.user_click,
-                cost_at_t,
+                cost_vector,
                 observed_features,
                 event.pool_indices,
             )
@@ -188,7 +188,7 @@ def evaluate_on_synthetic_data(
             trial,
             chosen_arm_index,
             reward_at_t,
-            cost_at_t,
+            cost_vector_at_t,
             observed_features,
             pool_indices,
         )

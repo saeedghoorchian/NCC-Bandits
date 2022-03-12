@@ -1,3 +1,4 @@
+import collections
 import itertools
 import math
 import datetime
@@ -109,10 +110,11 @@ class Algorithm1:
                  number_of_actions: int,
                  max_no_red_context: int,
                  beta_SimOOS: float,
-                 delta_SimOOS: float
+                 delta_SimOOS: float,
+                 window_length: int,
                  ):
 
-        self.name = f"Algorithm1 (beta={beta_SimOOS}, delta={delta_SimOOS})"
+        self.name = f"Algorithm1 (beta={beta_SimOOS}, delta={delta_SimOOS}, w={window_length})"
 
         self.time_horizon = all_contexts.shape[0]
         self.org_dim_context = all_contexts.shape[1]
@@ -120,6 +122,7 @@ class Algorithm1:
         self.number_of_actions = number_of_actions
         self.beta_SimOOS = beta_SimOOS
         self.delta_SimOOS = delta_SimOOS
+        self.w = window_length
 
         # All possible subsets of features (I in paper)
         self.all_perms = self.perm_construct(self.org_dim_context, self.max_no_red_context)
@@ -151,19 +154,34 @@ class Algorithm1:
         self.s_o_max_SimOOS = int(np.amax(self.s_o))
         self.s_o_total_SimOOS = int(np.sum(self.s_o))
 
-        # Define the counters and variables
-        # a - action, s - state (partial vector), o - observation (subset of features)
+
+        # Sliding windows and counters
+        # Different Tau variables are implemented as binary vectors of len=window, for easy dot products with window.
+        self.reward_window = collections.deque(maxlen=self.w)
+        self.Tau_aso = []
+        for a in range(self.number_of_actions):
+            self.Tau_aso.append([])
+            for s in range(self.s_o_max_SimOOS):
+                self.Tau_aso[-1].append([])
+                for o in range(self.number_of_perms_SimOOS):
+                    self.Tau_aso[-1][-1].append(collections.deque(maxlen=self.w))
+
+        self.cost_window = []
+        self.Tau_f = []
+        for f in range(self.org_dim_context):
+            self.cost_window.append(collections.deque(maxlen=self.w))
+            self.Tau_f.append(collections.deque(maxlen=self.w))
+
+        # a - action, s - state (partial vector), o - observation (subset of features), f - feature
         self.r_hat_t = np.zeros((self.number_of_actions, self.s_o_max_SimOOS, self.number_of_perms_SimOOS))
+        self.c_hat_t = np.zeros(self.org_dim_context)
         self.conf1_t = np.zeros((self.number_of_actions, self.s_o_max_SimOOS, self.number_of_perms_SimOOS))
         self.N_t_aso = np.zeros((self.number_of_actions, self.s_o_max_SimOOS, self.number_of_perms_SimOOS))
+        self.N_t_f = np.zeros(self.org_dim_context)
         self.N_t_o = np.zeros(self.number_of_perms_SimOOS)
         self.N_t_os = np.zeros((self.number_of_perms_SimOOS, self.s_o_max_SimOOS))
         self.d_t_os = np.zeros((self.number_of_perms_SimOOS, self.s_o_max_SimOOS))  # Definition: N_t_os / N_t_o
         self.N_t_as = np.zeros((self.number_of_actions, self.s_o_max_SimOOS))
-
-        # N_old_os = np.zeros((self.number_of_perms_SimOOS, self.s_o_max_SimOOS))
-        # N_old_as = np.zeros((self.number_of_actions, self.s_o_max_SimOOS))
-        self.N_old_aso = np.zeros((self.number_of_actions, self.s_o_max_SimOOS, self.number_of_perms_SimOOS))
 
         # Values needed for history.
         # Last observed feature subset.
@@ -188,21 +206,32 @@ class Algorithm1:
 
         self.selected_observation_action_at_t = np.zeros(self.org_dim_context)
 
-        self.new_round = 1  # so that it can run at the beginning
-
+        # Debug variables
         self.ucbs = np.zeros((self.time_horizon + 1, self.number_of_actions))
         self.rewards = np.zeros((self.time_horizon + 1, self.number_of_actions))
         self.confidences = np.zeros((self.time_horizon + 1, self.number_of_actions))
         self.rounds = 0
 
-    def initialize_new_round(self, t, cost_vector):
+    def find_optimal_policy(self, t, cost_vector):
         self.rounds += 1
         if t % 500 == 0:
             print(f"Round {t}, time {datetime.datetime.now()}")
+
+        # Optimistic cost value c_tilde is same for all observations.
+        c_tilde = np.zeros(self.org_dim_context)
+        for f in range(self.org_dim_context):
+            confidence_interval_cost_f = min(1, math.sqrt(
+                math.log((self.org_dim_context * self.w * self.time_horizon) / self.delta_SimOOS) / (
+                    2 * self.N_t_f[f]
+                )
+            ))
+            c_tilde[f] = self.c_hat_t[f] + confidence_interval_cost_f
+
         for i in range(self.number_of_perms_SimOOS):
 
             if i == 0:
-                F = [[] for i in range(self.number_of_perms_SimOOS)]  # the r_star values will be stored here
+                # r_star[observation][state]
+                r_star = [[] for i in range(self.number_of_perms_SimOOS)]  # the r_star values will be stored here
 
             z = int(self.s_o[i])
             for j in range(z):
@@ -211,24 +240,23 @@ class Algorithm1:
 
                     if self.N_t_aso[k, j, i] == 0:
                         self.upsilon_t[k, j, i] = 1  # min(1, !) = 1
-                        confidence_interval_1 = 0
+                        confidence_interval_reward = 0
                     else:
-                        confidence_interval_1 = min(1, math.sqrt(
-                            math.log((20 * self.s_o_total_SimOOS * self.number_of_actions * (t ** 5)) / self.delta_SimOOS) / (
+                        confidence_interval_reward = min(1, math.sqrt(
+                            math.log((self.number_of_actions * self.s_o_total_SimOOS * self.w * self.time_horizon) / self.delta_SimOOS) / (
                                     2 * self.N_t_aso[k, j, i])))
-                        self.upsilon_t[k, j, i] = self.r_hat_t[k, j, i] + confidence_interval_1
-                    # if t == 106:
-                    #     print(f"s_t: {j} obs: {i}, confidence: {confidence_interval_1}")
-                    self.conf1_t[k, j, i] = confidence_interval_1
+                        self.upsilon_t[k, j, i] = self.r_hat_t[k, j, i] + confidence_interval_reward
 
-                F[i].append(np.max(self.upsilon_t[:, j, i]))
+                    self.conf1_t[k, j, i] = confidence_interval_reward
+
+                r_star[i].append(np.max(self.upsilon_t[:, j, i]))
 
                 # which action has the highest UCB. This is actually the h_hat in the paper
                 self.a_hat_t[j, i] = np.argsort(self.upsilon_t[:, j, i])[::-1]  # descending sort
 
             prob_hat = self.d_t_os[i, :z]
 
-            confidence_interval_2 = min(1, math.sqrt(
+            confidence_interval_prob = min(1, math.sqrt(
                 (10 * self.s_o_total_SimOOS * math.log(4 * t / self.delta_SimOOS)) / self.N_t_o[i]))
 
             observation_action_in_optimization = self.all_perms[i]
@@ -237,11 +265,11 @@ class Algorithm1:
             prob_tilde = cp.Variable(z)
 
             objective = cp.Maximize(
-                (self.beta_SimOOS * (np.array(F[i]) * prob_tilde))
-                - np.dot(observation_action_in_optimization, cost_vector)
+                (self.beta_SimOOS * (np.array(r_star[i]) * prob_tilde))
+                - np.dot(observation_action_in_optimization, c_tilde)
             )
 
-            constraints = [cp.norm((prob_tilde - prob_hat), 1) <= confidence_interval_2, cp.sum(prob_tilde) == 1]
+            constraints = [cp.norm((prob_tilde - prob_hat), 1) <= confidence_interval_prob, cp.sum(prob_tilde) == 1]
 
             prob = cp.Problem(objective, constraints)
 
@@ -255,19 +283,15 @@ class Algorithm1:
 
         self.selected_observation_action_at_t = self.all_perms[self.index_of_observation_action_at_t]
 
-        self.N_old_aso = self.N_t_aso
-
-        self.new_round = 0  # New round initialized, no new round needed.
-
     def choose_features_to_observe(self, t, feature_indices, cost_vector):
         if t < self.number_of_perms_SimOOS:
             # First go through all subsets of features once.
-            self.observation_action_at_t = self.all_perms[t]
+            self.selected_observation_action_at_t = self.all_perms[t]
         else:
             # Optimistic Policy Optimization
-            if self.new_round == 1:
-                self.initialize_new_round(t, cost_vector)
-            self.observation_action_at_t = self.selected_observation_action_at_t
+            self.find_optimal_policy(t, cost_vector)
+
+        self.observation_action_at_t = self.selected_observation_action_at_t
         return [ind for ind, value in enumerate(self.observation_action_at_t) if value]
 
     def choose_arm(self, t: int, context_at_t: np.array, pool_indices: list):
@@ -312,49 +336,73 @@ class Algorithm1:
 
         return pool_indices.index(self.action_at_t)
 
-    def update(self, t, action_index_at_t, reward_at_t, cost_at_t, context_at_t, pool_indices):
+    def update(self, t, action_index_at_t, reward_at_t, cost_vector_at_t, context_at_t, pool_indices):
+
+        cost_at_t = np.dot(cost_vector_at_t, self.observation_action_at_t)
+
         action_at_t = pool_indices[action_index_at_t]
 
         s_t = self.state_extract(t, self.all_feature_types, context_at_t, self.observation_action_at_t)
 
+        # observation at time t
+        # first we try all possible observations once
+        o_t = t if t < self.number_of_perms_SimOOS else self.index_of_observation_action_at_t
+
+        # Update all counters (move the window)
+        # Unlike SimOOS, here when window moves - counters update for all action-state-observation tuples,
+        # not just the ones chosen in this trial.
+
+        # Reward window and relevant counters
+        if t > self.w:
+            self.reward_window.popleft()
+        self.reward_window.append(reward_at_t)
+
+        for obs in range(self.number_of_perms_SimOOS):
+            for state in range(int(self.s_o[obs])):
+                for a in range(self.number_of_actions):
+                    if t > self.w:
+                        self.Tau_aso[a][state][obs].popleft()
+                    if a == action_at_t and state == s_t and obs == o_t:
+                        self.Tau_aso[a][state][obs].append(1)
+                    else:
+                        self.Tau_aso[a][state][obs].append(0)
+
+                    tau_aso_array = np.array(self.Tau_aso[a][state][obs])
+                    self.N_t_aso[a][state][obs] = np.count_nonzero(tau_aso_array)
+
+                    sum_of_window_rewards = np.dot(np.array(self.reward_window), tau_aso_array)
+                    # r_hat_t is the empirical average reward.
+                    self.r_hat_t[a][state][obs] = sum_of_window_rewards / self.N_t_aso[a][state][obs]
+
+        # Cost window and counters
+        for f in range(self.org_dim_context):
+            if t > self.w:
+                self.cost_window[f].popleft()
+                self.Tau_f[f].popleft()
+
+            self.cost_window[f].append(cost_vector_at_t[f])
+            self.Tau_f[f].append(self.all_perms[o_t][f])
+
+            tau_f_array = np.array(self.Tau_f[f])
+
+            self.N_t_f[f] = np.count_nonzero(tau_f_array)
+            sum_of_window_costs_one_feature = np.dot(np.array(self.cost_window[f]), tau_f_array)
+            self.c_hat_t[f] = sum_of_window_costs_one_feature / self.N_t_f[f]
+
+        self.N_t_o[o_t] += 1
+        self.N_t_os[o_t, s_t] += 1
+        self.N_t_as[action_at_t, s_t] += 1
+
+        self.selected_context_SimOOS[t, :] = self.selected_observation_action_at_t
         if t < self.number_of_perms_SimOOS:
-            # Random Source Selection Part
-            # r_hat_t is basically the empirical average reward.
-            self.r_hat_t[action_at_t, s_t, t] = (self.N_t_aso[action_at_t, s_t, t] * self.r_hat_t[action_at_t, s_t, t] + reward_at_t) / (
-                        self.N_t_aso[action_at_t, s_t, t] + 1)
-
-            self.N_t_aso[action_at_t, s_t, t] += 1
-            self.N_t_o[t] += 1
-            self.N_t_os[t, s_t] += 1
-            self.d_t_os[
-                t, s_t
-            ] = 1  # This makes sense, since in this for loop, both N_t_os and N_t_o are being updated at every time.
-            # Moreover, each observation is seen only once.
-            self.N_t_as[action_at_t, s_t] += 1
-
-            self.selected_context_SimOOS[t, :] = np.array([c if c is not None else 0 for c in context_at_t])
+            # This makes sense, since in this for loop, both N_t_os and N_t_o are being updated at every time
+            # and each observation is seen only once.
+            self.d_t_os[o_t, s_t] = 1
 
         else:
             # Optimistic Policy Optimization
-            self.r_hat_t[action_at_t, s_t, self.index_of_observation_action_at_t] = (self.N_t_aso[
-                                                                               action_at_t, s_t, self.index_of_observation_action_at_t] *
-                                                                           self.r_hat_t[
-                                                                               action_at_t, s_t, self.index_of_observation_action_at_t] + reward_at_t) / (
-                                                                                  self.N_t_aso[
-                                                                                      action_at_t, s_t, self.index_of_observation_action_at_t] + 1)
-            self.N_t_aso[action_at_t, s_t, self.index_of_observation_action_at_t] = self.N_t_aso[
-                                                                              action_at_t, s_t, self.index_of_observation_action_at_t] + 1
-            self.N_t_o[self.index_of_observation_action_at_t] += 1
-            self.N_t_os[self.index_of_observation_action_at_t, s_t] += 1
-            self.d_t_os[self.index_of_observation_action_at_t, :] = self.N_t_os[self.index_of_observation_action_at_t, :] / self.N_t_o[
-                self.index_of_observation_action_at_t]
-            self.N_t_as[action_at_t, s_t] += 1
+            self.d_t_os[o_t, :] = self.N_t_os[o_t, :] / self.N_t_o[o_t]
 
-            self.new_round = 1
-
-            self.selected_context_SimOOS[t, :] = self.selected_observation_action_at_t
-
-        # This part is common both for random observation selection part and for optimistic policy optimization.
         self.all_gain_SimOOS[t + 1] = self.all_gain_SimOOS[t] + reward_at_t - cost_at_t
 
         self.selected_action_SimOOS[t] = action_at_t
@@ -364,14 +412,15 @@ class Algorithm1:
         self.collected_costs_SimOOS[t] = cost_at_t
 
 
-def run_new_SimOOS(all_contexts, all_rewards, max_no_red_context, beta_SimOOS, cost_vector, delta_SimOOS):
+def run_algorithm1(all_contexts, all_rewards, max_no_red_context, beta_SimOOS, cost_vector, delta_SimOOS, window_length):
 
-    alg = SimOOSAlgorithm(
+    alg = Algorithm1(
         all_contexts=all_contexts,
         max_no_red_context=max_no_red_context,
         number_of_actions=all_rewards.shape[1],
         beta_SimOOS=beta_SimOOS,
         delta_SimOOS=delta_SimOOS,
+        window_length=window_length,
     )
 
     pool_indices = list(range(1, all_rewards.shape[1]))
