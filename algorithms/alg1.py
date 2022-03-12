@@ -181,7 +181,6 @@ class Algorithm1:
         self.N_t_o = np.zeros(self.number_of_perms_SimOOS)
         self.N_t_os = np.zeros((self.number_of_perms_SimOOS, self.s_o_max_SimOOS))
         self.d_t_os = np.zeros((self.number_of_perms_SimOOS, self.s_o_max_SimOOS))  # Definition: N_t_os / N_t_o
-        self.N_t_as = np.zeros((self.number_of_actions, self.s_o_max_SimOOS))
 
         # Values needed for history.
         # Last observed feature subset.
@@ -257,7 +256,7 @@ class Algorithm1:
             prob_hat = self.d_t_os[i, :z]
 
             confidence_interval_prob = min(1, math.sqrt(
-                (10 * self.s_o_total_SimOOS * math.log(4 * t / self.delta_SimOOS)) / self.N_t_o[i]))
+                math.log((self.s_o_total_SimOOS * self.time_horizon) / self.delta_SimOOS) / 2 * self.N_t_o[i]))
 
             observation_action_in_optimization = self.all_perms[i]
 
@@ -389,9 +388,9 @@ class Algorithm1:
             sum_of_window_costs_one_feature = np.dot(np.array(self.cost_window[f]), tau_f_array)
             self.c_hat_t[f] = sum_of_window_costs_one_feature / self.N_t_f[f]
 
+        # These two counters do not use window, but rather all observations.
         self.N_t_o[o_t] += 1
         self.N_t_os[o_t, s_t] += 1
-        self.N_t_as[action_at_t, s_t] += 1
 
         self.selected_context_SimOOS[t, :] = self.selected_observation_action_at_t
         if t < self.number_of_perms_SimOOS:
