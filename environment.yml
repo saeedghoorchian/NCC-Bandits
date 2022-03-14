@@ -1,0 +1,13 @@
+name: costly_nonstationary_bandits
+channels:
+  - conda-forge
+dependencies:
+  - jupyter
+  - numpy
+  - matplotlib
+  - cvxpy
+  - pandas
+  - seaborn
+  - openpyxl
+  - plotly
+prefix: /Users/sbokupripeku/miniforge3/envs/costly_nonstationary_bandits
