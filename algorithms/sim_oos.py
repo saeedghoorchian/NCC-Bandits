@@ -1,7 +1,7 @@
 import itertools
 import math
-import random
 import datetime
+from collections import defaultdict
 
 import numpy as np
 import cvxpy as cp
@@ -47,63 +47,105 @@ class SimOOSAlgorithm:
 
         return all_perms
 
-    def state_construct(self, all_contexts: np.array, one_perm: np.array) -> tuple:
+
+    def state_construct(self, all_feature_counts: np.array, all_contexts: np.array, one_perm: np.array) -> tuple:
         """
-        s_o : number of states that can be reached by taking observation action one_perm
         all_contexts : context matrix
         one_perm : observation action
-        all_feature_types[i] : number of possible i-type context values
-        return s_o = multiply_{i : one_perm[i] = 1} all_feature_types[i]
+        all_feature_counts[i] : number of possible i-type context values
         """
         org_dim_context = all_contexts.shape[1]
-        all_feature_types = np.zeros(org_dim_context)
         number_of_observation_action = np.dot(one_perm,
                                               np.ones(org_dim_context))  # How many features observed in one_perm.
 
         s_o = 1
+        psi = 1
 
         # TODO Why is .item(0) here if its just a scalar?
         if number_of_observation_action.item(0) > 0:
             for i in range(org_dim_context):
-                # Number of values for i-th feature.
-                all_feature_types[i] = np.unique(all_contexts[:, i]).shape[0]
+                # For each observed feature multiply psi by the number of its values.
+                # So psi stores how many partial vectors with support given by one_perm there can be.
+                # all_feature_counts includes None, but partial vectors can't have None as values
+                psi = psi * (all_feature_counts[i] - 1) ** (one_perm[i])
 
-                # For each observed feature multiply s_o by the number of its values.
-                # So s_o stores how many partial vectors with support given by one_perm there can be.
-                s_o = s_o * (all_feature_types[i]) ** (one_perm[i])
+                # s_o is the size of state_array for a given observation. This array is larger, as it considers
+                # None as a value for each feature.
+                s_o = s_o * (all_feature_counts[i]) ** (one_perm[i])
 
+        psi = int(psi)
         s_o = int(s_o)
 
-        return all_feature_types, s_o
+        return psi, s_o
 
-    def state_extract(self, t,  all_feature_types, context_at_t, observation_action_at_t):
-        """The idea is to number the different states
+    def save_feature_values(self, all_contexts) -> tuple:
+        """Save unique values for each feature and their count.
 
-        context_at_t may contain None values at those indices where observation_action_at_t is 0 - these are
+        This is used later to enumerate all possible states and get index of state from
+        observed context (state = partial vector in paper).
+        """
+        org_dim_context = all_contexts.shape[1]
+        feature_values = defaultdict(list)
+        all_feature_counts = np.zeros(org_dim_context)
+
+        for i in range(org_dim_context):
+            unique_features = np.unique(all_contexts[:, i])
+            # None represents not observed feature
+            values = [None] + sorted(list(unique_features))
+            feature_values[i] = values
+
+            all_feature_counts[i] = len(values)
+
+        return feature_values, all_feature_counts
+
+    def state_extract(self, feature_values, all_feature_counts, context_at_t, observation_action_at_t) -> int:
+        """Return the state number by context and observation.
+
+        Let psi_i be the set of values of feature i (stored in feature_values[i]). psi_i includes None
+        to incorporate the possibility of not observed feature.
+        Then let Psi_total denote the cartesian product of psi_i for i in 1 to num_features.
+        There are |Psi_total| possible partial vectors in total. Each partial context vector then corresponds
+        to an index from 1 to |Psi_total|. This function returns this index.
+        |Psi_total| = product(all_feature_counts[i] for i = 1 to num_features)
+        The idea for this algorithm comes from positional number systems.
+
+        context_at_t contains None values at those indices where observation_action_at_t is 0 - these are
         not observed features.
         """
         org_dim_context = context_at_t.shape[0]
-        all_feature_types_tilde = np.ones(org_dim_context)
-        number_of_observations_at_t = np.dot(observation_action_at_t, np.ones(org_dim_context))
+        for feature, observation in zip(context_at_t, observation_action_at_t):
+            # Sanity check
+            if observation == 1:
+                assert feature is not None
+            else:
+                assert feature is None
 
-        for i in range(1, org_dim_context):
-            all_feature_types_tilde[i] = all_feature_types_tilde[i - 1] * (
-                    all_feature_types[i - 1] ** observation_action_at_t[i - 1])
+        # index of given context out of all possible partial vectors
+        state_index = 0
+        for i in range(org_dim_context):
+            state_index *= all_feature_counts[i]
+            # index of feature value of all possible values for this feature
+            feature_index = feature_values[i].index(context_at_t[i])
+            state_index += feature_index
 
-        # state = 1
-        state = 0
+        return int(state_index)
 
-        if number_of_observations_at_t.item(0) == 0:
+    def state_create(self, state_index, feature_values):
+        """Create partial vector from state_index.
+        
+        Not used in algorithm, only here for testing purposes.
+        """
+        org_dim_context = len(feature_values)
 
-            state = 0
+        context = np.zeros(org_dim_context)
+        for i in reversed(range(org_dim_context)):
+            feature_count = len(feature_values[i])
+            feature_index = state_index % feature_count
+            context[i] = feature_values[i][feature_index]
+            state_index -= feature_index
+            state_index = int(state_index/feature_count)
 
-        else:
-            for i in range(org_dim_context):
-                if observation_action_at_t[i]:
-                    state = state + all_feature_types_tilde[i] * (context_at_t[i] - 1)
-        state = int(state)
-
-        return state
+        return np.array([c if not np.isnan(c) else None for c in context])
 
     def isroundover(self, N_old, N):
         """Checks whether the round is ended.
@@ -126,7 +168,7 @@ class SimOOSAlgorithm:
                  number_of_actions: int,
                  max_no_red_context: int,
                  beta_SimOOS: float,
-                 delta_SimOOS: float
+                 delta_SimOOS: float,
                  ):
 
         self.name = f"SimOOS (beta={beta_SimOOS}, delta={delta_SimOOS})"
@@ -143,6 +185,7 @@ class SimOOSAlgorithm:
 
         self.number_of_perms_SimOOS = self.all_perms.shape[0]
         self.s_o = np.zeros(self.number_of_perms_SimOOS)
+        self.psi = np.zeros(self.number_of_perms_SimOOS)
 
         self.selected_context_SimOOS = np.zeros((self.time_horizon, self.org_dim_context))
         self.selected_action_SimOOS = np.zeros(self.time_horizon)
@@ -153,20 +196,20 @@ class SimOOSAlgorithm:
         self.collected_costs_SimOOS = np.zeros(self.time_horizon)
 
         ########################################################################################
+        self.feature_values, self.all_feature_counts = self.save_feature_values(all_contexts)
+
         for i in range(self.number_of_perms_SimOOS):
-            # all_feature_types[i] = the number of possible different values for feature i,
-            # regardless of the permutation all_perms[i]
-            self.all_feature_types = self.state_construct(all_contexts, self.all_perms[i])[0]  # self.all_perms[i,:]
-
-            # s_o[i] = number of different states(realizations) with the same observation action self.all_perms[i]
+            # psi[i] = number of different partial vectors(realizations) with given observation action self.all_perms[i]
             # How many partial vectors with support given by self.all_perms[i].
-            # Equal to cardinality of Psi(I) in the paper.
-            self.s_o[i] = self.state_construct(all_contexts, self.all_perms[i])[1]
+            # Equal to cardinality of Psi(I) in the paper. Used to determine Psi_total, for confidence bounds.
 
-        # s_o = contains the number of all different states(reaqlizations) with the same observation action
-        # up to "max_no_red_context" number of permitted observations.
+            # s_o[i] - size of state array for a given observation action. It is bigger than psi[i] because
+            # it also includes states which have None for observed features (although they are unreachable).
+            self.psi[i], self.s_o[i] = self.state_construct(self.all_feature_counts, all_contexts, self.all_perms[i])
+
+        # s_o_max_SimOOS - the largest state vector for all observations, needed to create arrays.
         self.s_o_max_SimOOS = int(np.amax(self.s_o))
-        self.s_o_total_SimOOS = int(np.sum(self.s_o))
+        self.Psi_total = int(np.sum(self.psi))
 
         # Define the counters and variables
         # a - action, s - state (partial vector), o - observation (subset of features)
@@ -231,7 +274,7 @@ class SimOOSAlgorithm:
                         confidence_interval_1 = 0
                     else:
                         confidence_interval_1 = min(1, math.sqrt(
-                            math.log((20 * self.s_o_total_SimOOS * self.number_of_actions * (t ** 5)) / self.delta_SimOOS) / (
+                            math.log((20 * self.Psi_total * self.number_of_actions * (t ** 5)) / self.delta_SimOOS) / (
                                     2 * self.N_t_aso[k, j, i])))
                         self.upsilon_t[k, j, i] = self.r_hat_t[k, j, i] + confidence_interval_1
                     # if t == 106:
@@ -246,7 +289,7 @@ class SimOOSAlgorithm:
             prob_hat = self.d_t_os[i, :z]
 
             confidence_interval_2 = min(1, math.sqrt(
-                (10 * self.s_o_total_SimOOS * math.log(4 * t / self.delta_SimOOS)) / self.N_t_o[i]))
+                (10 * self.Psi_total * math.log(4 * t / self.delta_SimOOS)) / self.N_t_o[i]))
 
             observation_action_in_optimization = self.all_perms[i]
 
@@ -300,7 +343,10 @@ class SimOOSAlgorithm:
             self.action_at_t = np.random.choice(pool_indices)
         else:
             # Optimistic Policy Optimization
-            s_t = self.state_extract(t, self.all_feature_types, context_at_t, self.observation_action_at_t)
+            s_t = self.state_extract(self.feature_values, self.all_feature_counts, context_at_t, self.observation_action_at_t)
+            # Sanity check
+            # created_context = self.state_create(s_t, self.feature_values)
+            # assert np.all(context_at_t == created_context)
 
             # If some of the actions have not been chosen yet - choose them.
             action_at_t_temp = np.argwhere(
@@ -335,7 +381,10 @@ class SimOOSAlgorithm:
 
         action_at_t = pool_indices[action_index_at_t]
 
-        s_t = self.state_extract(t, self.all_feature_types, context_at_t, self.observation_action_at_t)
+        s_t = self.state_extract(self.feature_values, self.all_feature_counts, context_at_t, self.observation_action_at_t)
+        # Sanity check
+        # created_context = self.state_create(s_t, self.feature_values)
+        # assert np.all(context_at_t == created_context)
 
         if t < self.number_of_perms_SimOOS:
             # Random Source Selection Part
