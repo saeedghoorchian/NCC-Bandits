@@ -69,13 +69,15 @@ class Algorithm1:
         # Sliding windows and counters
         # Different Tau variables are implemented as binary vectors of len=window, for easy dot products with window.
         self.reward_window = collections.deque(maxlen=self.w)
-        self.Tau_aso = []
-        for a in range(self.number_of_actions):
-            self.Tau_aso.append([])
-            for s in range(self.s_o_max_SimOOS):
-                self.Tau_aso[-1].append([])
-                for o in range(self.number_of_perms_SimOOS):
-                    self.Tau_aso[-1][-1].append(collections.deque(maxlen=self.w))
+        self.Tau_aso = collections.deque(maxlen=self.w)
+        # # Old unvectorized version.
+        # self.Tau_aso = []
+        # for a in range(self.number_of_actions):
+        #     self.Tau_aso.append([])
+        #     for s in range(self.s_o_max_SimOOS):
+        #         self.Tau_aso[-1].append([])
+        #         for o in range(self.number_of_perms_SimOOS):
+        #             self.Tau_aso[-1][-1].append(collections.deque(maxlen=self.w))
 
         self.cost_window = []
         self.Tau_f = []
@@ -250,6 +252,36 @@ class Algorithm1:
 
         return pool_indices.index(self.action_at_t)
 
+    def update_tau_aso(self, t, action_at_t, s_t, o_t):
+        update_tensor = np.zeros((self.number_of_actions, self.s_o_max_SimOOS, self.number_of_perms_SimOOS))
+        update_tensor[action_at_t, s_t, o_t] = 1
+        if t > self.w:
+            self.Tau_aso.popleft()
+        self.Tau_aso.append(update_tensor)
+
+        tau_aso_array = np.array(self.Tau_aso)
+        self.N_t_aso = np.count_nonzero(tau_aso_array, axis=0)
+        sum_of_window_rewards = np.tensordot(np.array(self.reward_window), tau_aso_array, axes=1)
+        self.r_hat_t = sum_of_window_rewards / self.N_t_aso
+
+        # # Old unvectorized version
+        # for obs in range(self.number_of_perms_SimOOS):
+        #     for state in range(int(self.s_o[obs])):
+        #         for a in range(self.number_of_actions):
+        #             if t > self.w:
+        #                 self.Tau_aso[a][state][obs].popleft()
+        #             if a == action_at_t and state == s_t and obs == o_t:
+        #                 self.Tau_aso[a][state][obs].append(1)
+        #             else:
+        #                 self.Tau_aso[a][state][obs].append(0)
+        #
+        #             tau_aso_array = np.array(self.Tau_aso[a][state][obs])
+        #             self.N_t_aso[a, state, obs] = np.count_nonzero(tau_aso_array)
+        #
+        #             sum_of_window_rewards = np.dot(np.array(self.reward_window), tau_aso_array)
+        #             # r_hat_t is the empirical average reward.
+        #             self.r_hat_t[a, state, obs] = sum_of_window_rewards / self.N_t_aso[a][state][obs]
+
     def update(self, t, action_index_at_t, reward_at_t, cost_vector_at_t, context_at_t, pool_indices):
 
         cost_at_t = np.dot(cost_vector_at_t, self.observation_action_at_t)
@@ -275,22 +307,7 @@ class Algorithm1:
             self.reward_window.popleft()
         self.reward_window.append(reward_at_t)
 
-        for obs in range(self.number_of_perms_SimOOS):
-            for state in range(int(self.s_o[obs])):
-                for a in range(self.number_of_actions):
-                    if t > self.w:
-                        self.Tau_aso[a][state][obs].popleft()
-                    if a == action_at_t and state == s_t and obs == o_t:
-                        self.Tau_aso[a][state][obs].append(1)
-                    else:
-                        self.Tau_aso[a][state][obs].append(0)
-
-                    tau_aso_array = np.array(self.Tau_aso[a][state][obs])
-                    self.N_t_aso[a][state][obs] = np.count_nonzero(tau_aso_array)
-
-                    sum_of_window_rewards = np.dot(np.array(self.reward_window), tau_aso_array)
-                    # r_hat_t is the empirical average reward.
-                    self.r_hat_t[a][state][obs] = sum_of_window_rewards / self.N_t_aso[a][state][obs]
+        self.update_tau_aso(t, action_at_t, s_t, o_t)
 
         # Cost window and counters
         for f in range(self.org_dim_context):

@@ -106,8 +106,7 @@ class SimOOSAlgorithm:
 
     def initialize_new_round(self, t, cost_vector):
         self.rounds += 1
-        if t % 500 == 0:
-            print(f"Trial {t}, time {datetime.datetime.now()}")
+
         for i in range(self.number_of_perms_SimOOS):
 
             if i == 0:
@@ -225,6 +224,9 @@ class SimOOSAlgorithm:
         return pool_indices.index(self.action_at_t)
 
     def update(self, t, action_index_at_t, reward_at_t, cost_vector_at_t, context_at_t, pool_indices):
+
+        if t % 500 == 0:
+            print(f"Trial {t}, time {datetime.datetime.now()}")
 
         cost_at_t = np.dot(cost_vector_at_t, self.observation_action_at_t)
 
