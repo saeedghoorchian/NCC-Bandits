@@ -16,8 +16,10 @@ class Algorithm1:
                  beta: float,
                  delta: float,
                  window_length: int,
+                 feature_flag: bool=False,
                  ):
 
+        self.feature_flag = feature_flag
         self.name = f"Algorithm1 (beta={beta}, delta={delta}, w={window_length})"
 
         self.time_horizon = all_contexts.shape[0]
@@ -30,6 +32,9 @@ class Algorithm1:
 
         # All possible subsets of features (I in paper)
         self.all_perms = utilities.perm_construct(self.org_dim_context, self.max_no_red_context)
+        self.perm_to_index = {}
+        for i, perm in enumerate(self.all_perms):
+            self.perm_to_index[tuple(perm)] = i
 
         self.number_of_perms_SimOOS = self.all_perms.shape[0]
         self.s_o = np.zeros(self.number_of_perms_SimOOS)
@@ -166,7 +171,7 @@ class Algorithm1:
 
             observation_action_in_optimization = self.all_perms[i]
 
-            # Construct the problem, Equation (3) in the paper
+            # Construct the problem, Equation (15) in the paper
             prob_tilde = cp.Variable(z)
 
             objective = cp.Maximize(
@@ -302,19 +307,26 @@ class Algorithm1:
             sum_of_window_costs_one_feature = np.dot(np.array(self.cost_window[f]), tau_f_array)
             self.c_hat_t[f] = sum_of_window_costs_one_feature / self.N_t_f[f]
 
-        # These two counters do not use window, but rather all observations.
-        self.N_t_o[o_t] += 1
-        self.N_t_os[o_t, s_t] += 1
-
         self.selected_context_SimOOS[t, :] = self.selected_observation_action_at_t
         if t < self.number_of_perms_SimOOS:
             # This makes sense, since in this for loop, both N_t_os and N_t_o are being updated at every time
             # and each observation is seen only once.
+            self.N_t_o[o_t] += 1
+            self.N_t_os[o_t, s_t] += 1
             self.d_t_os[o_t, s_t] = 1
 
         else:
             # Optimistic Policy Optimization
-            self.d_t_os[o_t, :] = self.N_t_os[o_t, :] / self.N_t_o[o_t]
+            # Update counters for all substates of the seen state.
+            substates, substate_observations = utilities.generate_substates(
+                context_at_t, self.observation_action_at_t
+            )
+            for sub, sub_obs in zip(substates, substate_observations):
+                sub_s_t = utilities.state_extract(self.feature_values, self.all_feature_counts, sub, sub_obs)
+                sub_obs_index = self.perm_to_index[tuple(sub_obs)]
+                self.N_t_o[sub_obs_index] += 1
+                self.N_t_os[sub_obs_index, sub_s_t] += 1
+                self.d_t_os[sub_obs_index, :] = self.N_t_os[sub_obs_index, :] / self.N_t_o[sub_obs_index]
 
         self.all_gain_SimOOS[t + 1] = self.all_gain_SimOOS[t] + reward_at_t - cost_at_t
 
