@@ -28,6 +28,9 @@ class SimOOSAlgorithm:
 
         # All possible subsets of features (I in paper)
         self.all_perms = utilities.perm_construct(self.org_dim_context, self.max_no_red_context)
+        self.perm_to_index = {}
+        for i, perm in enumerate(self.all_perms):
+            self.perm_to_index[tuple(perm)] = i
 
         self.number_of_perms_SimOOS = self.all_perms.shape[0]
         self.s_o = np.zeros(self.number_of_perms_SimOOS)
@@ -259,10 +262,17 @@ class SimOOSAlgorithm:
                                                                                       action_at_t, s_t, self.index_of_observation_action_at_t] + 1)
             self.N_t_aso[action_at_t, s_t, self.index_of_observation_action_at_t] = self.N_t_aso[
                                                                               action_at_t, s_t, self.index_of_observation_action_at_t] + 1
-            self.N_t_o[self.index_of_observation_action_at_t] += 1
-            self.N_t_os[self.index_of_observation_action_at_t, s_t] += 1
-            self.d_t_os[self.index_of_observation_action_at_t, :] = self.N_t_os[self.index_of_observation_action_at_t, :] / self.N_t_o[
-                self.index_of_observation_action_at_t]
+            # Update counters for all substates of the seen state.
+            substates, substate_observations = utilities.generate_substates(
+                context_at_t, self.observation_action_at_t
+            )
+            for sub, sub_obs in zip(substates, substate_observations):
+                sub_s_t = utilities.state_extract(self.feature_values, self.all_feature_counts, sub, sub_obs)
+                sub_obs_index = self.perm_to_index[tuple(sub_obs)]
+                self.N_t_o[sub_obs_index] += 1
+                self.N_t_os[sub_obs_index, sub_s_t] += 1
+                self.d_t_os[sub_obs_index, :] = self.N_t_os[sub_obs_index, :] / self.N_t_o[sub_obs_index]
+
             self.N_t_as[action_at_t, s_t] += 1
 
             self.new_round = utilities.is_round_over(self.N_old_aso, self.N_t_aso)

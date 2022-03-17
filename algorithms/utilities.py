@@ -175,3 +175,43 @@ def is_round_over(N_old, N):
     flag = int(((N-N_old) >= np.maximum(N_old, 1)).any())
 
     return flag
+
+
+def generate_substate_observations(observation: np.array) -> np.array:
+    """Generate binary vectors that correspond to subsets of a given observation."""
+    all_perms = full_perm_construct(observation.shape[0])
+
+    substate_observations = np.multiply(all_perms, observation)
+
+    substate_observations = np.unique(substate_observations, axis=0)
+
+    return substate_observations
+
+
+def get_substate(vector: np.array, substate_observation: np.array) -> np.array:
+    """Get a substate of a given vector specified by the substate_observation"""
+    # Sanity check: make sure that substate_observation is not larger - that it is 0 where vector is not observed.
+    for i in range(substate_observation.shape[0]):
+        if vector[i] is None:
+            assert substate_observation[i] == 0
+
+    substate = np.array([
+        vector[i] if substate_observation[i] == 1 else None
+        for i in range(substate_observation.shape[0])
+    ])
+
+    return substate
+
+
+def generate_substates(partial_vector: np.array, observation: np.array) -> tuple:
+    """Generate all substates of a given partial vector and observation.
+
+    Substate is a partial vector, whose domain is a subset of domain of a given vector and also substate and given
+    vector must both be consistent to some full vector in their domaints. For details refer to SimOOS paper.
+    """
+    substate_observations = generate_substate_observations(observation)
+    substates = np.zeros(substate_observations.shape, dtype=object)
+    for i, substate_obs in enumerate(substate_observations):
+        substate_vector = get_substate(partial_vector, substate_obs)
+        substates[i, :] = substate_vector
+    return substates, substate_observations
