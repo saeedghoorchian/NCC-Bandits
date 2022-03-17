@@ -3,7 +3,7 @@ import datetime
 import numpy as np
 import cvxpy as cp
 
-import utilities
+import algorithms.utilities as utilities
 
 
 class SimOOSAlgorithm:
@@ -13,8 +13,10 @@ class SimOOSAlgorithm:
                  max_no_red_context: int,
                  beta_SimOOS: float,
                  delta_SimOOS: float,
+                 feature_flag: bool=False,
                  ):
 
+        self.feature_flag = feature_flag
         self.name = f"SimOOS (beta={beta_SimOOS}, delta={delta_SimOOS})"
 
         self.time_horizon = all_contexts.shape[0]
@@ -159,7 +161,7 @@ class SimOOSAlgorithm:
 
         self.selected_observation_action_at_t = self.all_perms[self.index_of_observation_action_at_t]
 
-        self.N_old_aso = self.N_t_aso
+        self.N_old_aso = np.copy(self.N_t_aso)
 
         self.new_round = 0  # New round initialized, no new round needed.
 

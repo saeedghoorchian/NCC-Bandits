@@ -164,18 +164,14 @@ def state_create(state_index, feature_values):
 def is_round_over(N_old, N):
     """Checks whether the round is ended.
 
+    In SimOOS paper:
+        nu_k(a, psi) = N - N_old - count of observations in the current round.
+        N_k(a, psi) = N_old - count of observations up to the current round (not including).
+    So condition of round over is nu_k >= max(1, N_k) for any a and any psi. This means that for some action and
+    state the number of observations doubled.
+
     flag = 1 - round is over, flag = 0 - round is not over.
     """
-    # Old, unvectorized version
-    # flag = 0
-    #
-    # for j in range(N_old.shape[2]):  # if for a perm j=o
-    #     for i in range(N_old.shape[1]):  # if for a state s=i
-    #         for k in range(N_old.shape[0]):  # if for an action a=k
-    #
-    #             if (int(N[k, i, j].item(0)) <= N_old[k, i, j]) and (int(N_old[k, i, j].item(0)) > 0):
-    #                 flag = 1
-
-    flag = int(((N <= N_old) & (N_old > 0)).any())
+    flag = int(((N-N_old) >= np.maximum(N_old, 1)).any())
 
     return flag
