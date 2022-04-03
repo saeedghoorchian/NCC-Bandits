@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append('..')
 
 import argparse
@@ -60,6 +61,23 @@ def save_results(gain, trials, params):
         f.write(f"Algorithm 1 {params_string} gain: {gain[-1]}\n")
 
 
+def validate_params(params):
+    assert "beta" in params
+    beta = params["beta"]
+    assert isinstance(beta, float)
+    assert beta >= 0.0
+
+    assert "delta" in params
+    delta = params["delta"]
+    assert isinstance(delta, float)
+    assert delta >= 0
+
+    assert "window_length" in params
+    window_length = params["window_length"]
+    assert isinstance(window_length, int)
+    assert window_length > 0
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -72,35 +90,23 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--beta",
-        type=float,
+        "--config",
+        type=str,
         required=True,
-        help="Beta parameter for algorithm",
+        help="Config file for algorithm evaluation",
     )
 
-    parser.add_argument(
-        "--delta",
-        type=float,
-        required=True,
-        help="Delta parameter for algorithm",
-    )
-
-    parser.add_argument(
-        "--window",
-        type=int,
-        required=True,
-        help="Window length parameter for algorithm",
-    )
     args = parser.parse_args()
 
     if args.trials < 0:
         args.trials = None
 
-    params = {
-        "beta": args.beta,
-        "delta":  args.delta,
-        "window_length": args.window,
-    }
+    with open(args.config, "r") as f:
+        experiment_config = json.load(f)
+
+    params = experiment_config["params"]
+
+    validate_params(params)
 
     gain = evaluate_algorithm(DATA_PATH, args.trials, params)
 
