@@ -111,7 +111,46 @@ def evaluate_on_synthetic_data(
         rewards: np.array,
         costs_vector: np.array,
         stop_after: int = None,
-) -> list:
+        num_repetitions: int = 1,
+        return_full: bool = False,
+) -> np.array:
+    assert num_repetitions >= 1
+    length = stop_after if stop_after is not None else contexts.shape[0]
+    gains = np.zeros((num_repetitions, length))
+    achieved_rewards = np.zeros((num_repetitions, length))
+    paid_costs = np.zeros((num_repetitions, length))
+    for i in range(num_repetitions):
+        print(f"Starting repetition {i}:")
+        gain, reward, cost = evaluate_on_synthetic_data_once(bandit_algorithm, contexts, rewards, costs_vector, stop_after)
+        print()
+        gains[i, :] = np.array(gain)
+        achieved_rewards[i, :] = np.array(reward)
+        paid_costs[i, :] = np.array(cost)
+
+    gains = np.mean(gains, axis=0)
+    achieved_rewards = np.mean(achieved_rewards, axis=0)
+    paid_costs = np.mean(paid_costs, axis=0)
+
+    if num_repetitions > 1:
+        print(f"Result averaged over {num_repetitions} repetitions:")
+        print(
+            f"{bandit_algorithm.name}\n"
+            f"Total gain: {gains[-1]}\n"
+            f"\tTotal reward: {achieved_rewards[-1]}\n"
+            f"\tTotal cost: {paid_costs[-1]}\n"
+        )
+    if return_full:
+        return gains, achieved_rewards, paid_costs
+    return gains
+
+
+def evaluate_on_synthetic_data_once(
+        bandit_algorithm,
+        contexts: np.array,
+        rewards: np.array,
+        costs_vector: np.array,
+        stop_after: int = None,
+) -> tuple:
 
     """
     Function to evaluate a bandit algorithm using synthetic dataset.
@@ -215,5 +254,5 @@ def evaluate_on_synthetic_data(
         f"Execution time: {execution_time}"
     )
 
-    return cumulative_gain
+    return cumulative_gain, cumulative_reward, cumulative_cost
 
