@@ -4,6 +4,7 @@ sys.path.append('..')
 
 import argparse
 import json
+import os
 import pickle
 import time
 import warnings
@@ -11,7 +12,7 @@ import warnings
 import algorithms
 import evaluation
 
-DATA_PATH = "../dataset/synthetic/context_dependent.pickle"
+DATA_PATH = f"../dataset/synthetic/synthetic_data_costs_{os.getenv('SLURM_ARRAY_TASK_ID')}.pickle"
 
 
 def evaluate_algorithm(data_path, trials, parameters):
@@ -33,19 +34,22 @@ def evaluate_algorithm(data_path, trials, parameters):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         s = time.time()
-        gain = evaluation.evaluate_on_synthetic_data(
+        gain, rew, cost = evaluation.evaluate_on_synthetic_data(
             policy,
             contexts[:trials],
             rewards[:trials],
             costs_vector[:trials],
             stop_after=trials,
+            return_full=True,
         )
         print(f"Took {time.time() - s} seconds")
 
-    return gain
+    return gain, rew, cost
 
 
-def save_results(gain, trials, params):
+def save_results(results, trials, params):
+
+    gain, rew, cost = results
 
     params_string = ""
     for k, v in params.items():
@@ -57,8 +61,8 @@ def save_results(gain, trials, params):
     with open(f"results/results_{policy}_t_{trials}_{params_string}.pickle", "wb") as f:
         pickle.dump(gain, f)
 
-    with open(f"results/results_{policy}_t_{trials}_{params_string}.txt", "w") as f:
-        f.write(f"Algorithm 1 {params_string} gain: {gain[-1]}\n")
+    with open(f"results/results_{policy}_t_{trials}_{params_string}_perf.txt", "w") as f:
+        f.write(f"Algorithm 1 {params_string} gain {gain[-1]} performance: {rew[-1]/ cost[-1]}\n")
 
 
 def validate_params(params):
@@ -108,6 +112,6 @@ if __name__ == "__main__":
 
     validate_params(params)
 
-    gain = evaluate_algorithm(DATA_PATH, args.trials, params)
+    results = evaluate_algorithm(DATA_PATH, args.trials, params)
 
-    save_results(gain, args.trials, params)
+    save_results(results, args.trials, params)
