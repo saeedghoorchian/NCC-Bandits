@@ -58,10 +58,10 @@ def save_results(results, trials, params):
 
     policy = "alg1"
 
-    with open(f"results/results_{policy}_t_{trials}_{params_string}.pickle", "wb") as f:
+    with open(f"results/results_{policy}_t_{trials}_{params_string}_{os.getenv('SLURM_ARRAY_TASK_ID')}.pickle", "wb") as f:
         pickle.dump(gain, f)
 
-    with open(f"results/results_{policy}_t_{trials}_{params_string}_perf.txt", "w") as f:
+    with open(f"results/results_{policy}_t_{trials}_{params_string}_perf_{os.getenv('SLURM_ARRAY_TASK_ID')}.txt", "w") as f:
         f.write(f"Algorithm 1 {params_string} gain {gain[-1]} performance: {rew[-1]/ cost[-1]}\n")
 
 
