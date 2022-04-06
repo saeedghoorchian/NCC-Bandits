@@ -4,7 +4,6 @@ sys.path.append('..')
 
 import argparse
 import json
-import os
 import pickle
 import time
 import warnings
@@ -12,7 +11,7 @@ import warnings
 import algorithms
 import evaluation
 
-DATA_PATH = f"../dataset/synthetic/synthetic_data_costs_{os.getenv('SLURM_ARRAY_TASK_ID')}.pickle"
+DATA_PATH = "../dataset/synthetic/synthetic_data.pickle"
 
 
 def evaluate_algorithm(data_path, trials, parameters):
@@ -58,11 +57,11 @@ def save_results(results, trials, params):
 
     policy = "alg1"
 
-    with open(f"results/results_{policy}_t_{trials}_{params_string}_{os.getenv('SLURM_ARRAY_TASK_ID')}.pickle", "wb") as f:
+    with open(f"results/results_{policy}_t_{trials}_{params_string}.pickle", "wb") as f:
         pickle.dump(gain, f)
 
-    with open(f"results/results_{policy}_t_{trials}_{params_string}_perf_{os.getenv('SLURM_ARRAY_TASK_ID')}.txt", "w") as f:
-        f.write(f"Algorithm 1 {params_string} gain {gain[-1]} performance: {rew[-1]/ cost[-1]}\n")
+    with open(f"results/results_{policy}_t_{trials}_{params_string}.txt", "w") as f:
+        f.write(f"Algorithm 1 {params_string} gain: {gain[-1]}\n")
 
 
 def validate_params(params):
