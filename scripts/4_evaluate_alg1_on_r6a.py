@@ -13,7 +13,7 @@ import algorithms
 import evaluation
 import utilities
 
-DATA_PATH = "../dataset/R6/subsample/data_04_medium.pickle"
+DATA_PATH = "../dataset/R6/subsample/data_04_medium_large.pickle"
 # Parameter of discretization
 NUM_BINS = 4
 
