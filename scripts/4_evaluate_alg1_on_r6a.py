@@ -50,7 +50,7 @@ def evaluate_algorithm(data_path, trials, parameters):
         all_contexts=contexts,
         number_of_actions=data.n_arms,
         max_no_red_context=len(data.events[0].user_features),
-        pool_size=32,
+        pool_size=64,
         **parameters,
     )
     print(f"Creation took {time.time() - s} seconds")
