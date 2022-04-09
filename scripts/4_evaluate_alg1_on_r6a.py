@@ -20,6 +20,7 @@ NUM_BINS = 4
 
 def preprocess_data(raw_data):
     """Preprocess R6A data by discretizing user feature values"""
+    s = time.time()
     X = np.stack(
         [
             ev.user_features for ev in raw_data.events
@@ -33,6 +34,8 @@ def preprocess_data(raw_data):
     for event, x in zip(raw_data.events, X_disc):
         event.user_features = x
 
+    print(f"Preprocessing took {time.time() - s} seconds")
+
     return raw_data, X_disc
 
 
@@ -43,10 +46,11 @@ def evaluate_algorithm(data_path, trials, parameters):
     data, contexts = preprocess_data(raw_data)
 
     s = time.time()
-    policy = algorithms.Algorithm1(
+    policy = algorithms.Algorithm1Parallel(
         all_contexts=contexts,
         number_of_actions=data.n_arms,
         max_no_red_context=len(data.events[0].user_features),
+        pool_size=32,
         **parameters,
     )
     print(f"Creation took {time.time() - s} seconds")
