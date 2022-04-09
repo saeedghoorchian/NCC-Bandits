@@ -2,7 +2,7 @@ import numpy as np
 
 
 class LinUCB:
-    def __init__(self, context_dimension: int, n_arms: int, alpha: float):
+    def __init__(self, n_trials: int, context_dimension: int, n_arms: int, alpha: float):
         self.context_dimension = context_dimension
         # alpha parameter controls how large the ucb is, larger alpha means more exploration
         assert alpha > 0.0, "Alpha parameter must be positive"
@@ -20,6 +20,8 @@ class LinUCB:
         self.b = np.zeros((n_arms, context_dimension, 1), dtype=np.float32)
         # Vertical array of size n_arms, each element is vector of size d x 1
         self.theta = np.zeros((n_arms, context_dimension, 1), dtype=np.float32)
+
+        # self.ucbs = np.zeros((n_trials + 1, n_arms))
 
     def choose_arm(self, trial, context, pool_indices):
         """Return best arm's index relative to the pool.
@@ -46,6 +48,8 @@ class LinUCB:
         upper_confidence_bound = self.alpha * np.sqrt(x_T @ A_inv @ x)  # (n_pool, 1, 1)
 
         score = estimated_reward + upper_confidence_bound
+
+        # self.ucbs[trial] = np.ravel(estimated_reward + upper_confidence_bound)
 
         return np.argmax(score)
 

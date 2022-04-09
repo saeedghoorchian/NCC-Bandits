@@ -235,7 +235,7 @@ def evaluate_on_synthetic_data_once(
         cumulative_reward.append(total_reward)
         cumulative_gain.append(total_gain)
 
-        if stop_after is not None and trial >= stop_after:
+        if stop_after is not None and trial >= stop_after-1:
             break
 
     end = time.time()

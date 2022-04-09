@@ -35,6 +35,7 @@ class Dataset:
         filenames: List[str],
         filtered_ids: List[str] = (),
         subsample_percentage: float = 1.0,
+        stop_after: int = None,
     ):
         """
         Reads and saves a stream of events from the list of given data files for R6A version.
@@ -115,6 +116,10 @@ class Dataset:
                         pool_indices=pool_idx,
                     )
                 )
+
+                if stop_after is not None and len(self.events) >= stop_after:
+                    break
+
         self.article_features = np.array(self.article_features)
         self.n_arms = len(self.articles)
         self.n_events = len(self.events)
