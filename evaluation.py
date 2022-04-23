@@ -120,7 +120,6 @@ def evaluate_on_synthetic_data(
     achieved_rewards = np.zeros((num_repetitions, length))
     paid_costs = np.zeros((num_repetitions, length))
     for i in range(num_repetitions):
-        print(f"Starting repetition {i}:")
         gain, reward, cost = evaluate_on_synthetic_data_once(bandit_algorithm, contexts, rewards, costs_vector, stop_after)
         print()
         gains[i, :] = np.array(gain)
@@ -144,12 +143,14 @@ def evaluate_on_synthetic_data(
     return gains
 
 
-def evaluate_on_synthetic_data_once(
+def evaluate_on_synthetic_data(
         bandit_algorithm,
         contexts: np.array,
         rewards: np.array,
         costs_vector: np.array,
+        beta: int = 1.0,
         stop_after: int = None,
+        return_full: bool = False,
 ) -> tuple:
 
     """
@@ -218,9 +219,10 @@ def evaluate_on_synthetic_data_once(
         total_cost += cost_at_t
 
         reward_at_t = rewards[trial, chosen_arm]
-        gain_at_t = reward_at_t - cost_at_t
+        # Collected reward is multiplied by beta, but the algorithms see the original reward 0 or 1.
+        gain_at_t = beta*reward_at_t - cost_at_t
 
-        total_reward += reward_at_t
+        total_reward += beta*reward_at_t
         total_gain += gain_at_t
 
         bandit_algorithm.update(
@@ -248,11 +250,15 @@ def evaluate_on_synthetic_data_once(
     )
     print(
         f"{bandit_algorithm.name}\n"
+        f"Beta = {beta}\n"
         f"Total gain: {total_gain}\n"
         f"\tTotal reward: {total_reward}\n"
         f"\tTotal cost: {total_cost}\n"
         f"Execution time: {execution_time}"
     )
 
-    return cumulative_gain, cumulative_reward, cumulative_cost
+    if return_full:
+        return cumulative_gain, cumulative_reward, cumulative_cost
+    else:
+        return cumulative_gain
 
