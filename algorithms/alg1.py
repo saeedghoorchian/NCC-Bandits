@@ -122,22 +122,35 @@ class Algorithm1:
         self.ucbs = np.zeros((self.time_horizon + 1, self.number_of_actions))
         self.rewards = np.zeros((self.time_horizon + 1, self.number_of_actions))
         self.confidences = np.zeros((self.time_horizon + 1, self.number_of_actions))
+
+        self.costs = np.zeros((self.time_horizon + 1, self.org_dim_context))
+        self.c_hats = np.zeros((self.time_horizon + 1, self.org_dim_context))
+        self.cost_conf_int = np.zeros((self.time_horizon + 1, self.org_dim_context))
+
+        self.r_stars = np.zeros((self.time_horizon + 1, self.s_o_max_SimOOS))
+        self.nus = np.zeros((self.time_horizon + 1, self.number_of_perms_SimOOS))
         self.rounds = 0
 
     def find_optimal_policy(self, t, cost_vector):
         self.rounds += 1
-        if t % 500 == 0:
-            print(f"Round {t}, time {datetime.datetime.now()}")
 
         # Optimistic cost value c_tilde is same for all observations.
         c_tilde = np.zeros(self.org_dim_context)
         for f in range(self.org_dim_context):
-            confidence_interval_cost_f = min(1, math.sqrt(
+            conf_int_before_min = math.sqrt(
                 math.log((self.org_dim_context * self.w * self.time_horizon) / self.delta) / (
-                    2 * self.N_t_f[f]
+                        2 * self.N_t_f[f]
                 )
-            ))
-            c_tilde[f] = self.c_hat_t[f] + confidence_interval_cost_f
+            )
+            confidence_interval_cost_f = min(1, conf_int_before_min)
+
+            if self.feature_flag:
+                c_tilde[f] = self.c_hat_t[f] + confidence_interval_cost_f
+            else:
+                c_tilde[f] = self.c_hat_t[f] - confidence_interval_cost_f
+            self.cost_conf_int[t, f] = conf_int_before_min
+        self.c_hats[t, :] = self.c_hat_t
+        self.costs[t, :] = c_tilde
 
         for i in range(self.number_of_perms_SimOOS):
 
@@ -181,6 +194,12 @@ class Algorithm1:
                 - np.dot(observation_action_in_optimization, c_tilde)
             )
 
+            r_star_array = np.zeros(self.s_o_max_SimOOS)
+            for ind in range(len(r_star[i])):
+                r_star_array[ind] += r_star[i][ind]
+
+            self.r_stars[t, :] = r_star_array
+
             constraints = [cp.norm((prob_tilde - prob_hat), 1) <= confidence_interval_prob, cp.sum(prob_tilde) == 1]
 
             prob = cp.Problem(objective, constraints)
@@ -190,6 +209,7 @@ class Algorithm1:
             # Similar to paper, set V_hat[i] = nu_t[i] as the maximizer
             self.nu_t[i] = prob.value
 
+        self.nus[t, :] = self.nu_t
         self.index_of_observation_action_at_t = np.argmax(
             self.nu_t)  # Find which all_perms[i](= index_of_observation_action_at_t) gives the highest prob_tilde
 
@@ -260,7 +280,7 @@ class Algorithm1:
         self.Tau_aso.append(update_tensor)
 
         tau_aso_array = np.array(self.Tau_aso)
-        self.N_t_aso = np.count_nonzero(tau_aso_array, axis=0)
+        self.N_t_aso = np.maximum(1, np.count_nonzero(tau_aso_array, axis=0))
         sum_of_window_rewards = np.tensordot(np.array(self.reward_window), tau_aso_array, axes=1)
         self.r_hat_t = sum_of_window_rewards / self.N_t_aso
 
@@ -283,6 +303,8 @@ class Algorithm1:
         #             self.r_hat_t[a, state, obs] = sum_of_window_rewards / self.N_t_aso[a][state][obs]
 
     def update(self, t, action_index_at_t, reward_at_t, cost_vector_at_t, context_at_t, pool_indices):
+        if t % 500 == 0:
+            print(f"Round {t}, time {datetime.datetime.now()}")
 
         cost_at_t = np.dot(cost_vector_at_t, self.observation_action_at_t)
 
@@ -320,7 +342,7 @@ class Algorithm1:
 
             tau_f_array = np.array(self.Tau_f[f])
 
-            self.N_t_f[f] = np.count_nonzero(tau_f_array)
+            self.N_t_f[f] = max(1, np.count_nonzero(tau_f_array))
             sum_of_window_costs_one_feature = np.dot(np.array(self.cost_window[f]), tau_f_array)
             self.c_hat_t[f] = sum_of_window_costs_one_feature / self.N_t_f[f]
 

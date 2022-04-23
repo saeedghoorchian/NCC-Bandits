@@ -58,7 +58,9 @@ class PSLinUCB:
 
         self.change_points = []
 
-        # self.ucbs = np.zeros((n_trials+1, n_arms))
+        self.rewards = np.zeros((n_trials+1, n_arms))
+        self.confidences = np.zeros((n_trials+1, n_arms))
+        self.ucbs = np.zeros((n_trials+1, n_arms))
 
     def choose_arm(self, trial, context, pool_indices):
         """Return best arm's index relative to the pool.
@@ -92,7 +94,9 @@ class PSLinUCB:
 
         score = estimated_reward + upper_confidence_bound
 
-        # self.ucbs[trial] = np.ravel(score)
+        self.ucbs[trial] = np.ravel(score)
+        self.rewards[trial] = np.ravel(estimated_reward)
+        self.confidences[trial] = np.ravel(upper_confidence_bound)
 
         return np.argmax(score)
 

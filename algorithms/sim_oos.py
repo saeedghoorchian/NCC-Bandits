@@ -102,11 +102,16 @@ class SimOOSAlgorithm:
         self.ucbs = np.zeros((self.time_horizon + 1, self.number_of_actions))
         self.rewards = np.zeros((self.time_horizon + 1, self.number_of_actions))
         self.confidences = np.zeros((self.time_horizon + 1, self.number_of_actions))
+
+        self.costs = np.zeros((self.time_horizon + 1, self.org_dim_context))
+
+        self.nus = np.zeros((self.time_horizon + 1, self.number_of_perms_SimOOS))
         self.rounds = 0
 
     def initialize_new_round(self, t, cost_vector):
         self.rounds += 1
 
+        self.costs[t, :] = cost_vector
         for i in range(self.number_of_perms_SimOOS):
 
             if i == 0:
@@ -158,6 +163,7 @@ class SimOOSAlgorithm:
             # Similar to paper, set V_hat[i] = nu_t[i] as the maximizer
             self.nu_t[i] = prob.value
 
+        self.nus[t, :] = self.nu_t
         self.index_of_observation_action_at_t = np.argmax(
             self.nu_t)  # Find which all_perms[i](= index_of_observation_action_at_t) gives the highest prob_tilde
 

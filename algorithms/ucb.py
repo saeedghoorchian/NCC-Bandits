@@ -15,9 +15,9 @@ class UCB1:
         self.q = np.zeros(n_arms)  # average reward for each arm
         self.n = np.ones(n_arms)  # number of times each arm was chosen
 
-        # self.ucbs = np.zeros((n_trials+1, n_arms))
-        # self.qs = np.zeros((n_trials+1, n_arms))
-        # self.ns = np.zeros((n_trials+1, n_arms))
+        self.ucbs = np.zeros((n_trials+1, n_arms))
+        self.qs = np.zeros((n_trials+1, n_arms))
+        self.ns = np.zeros((n_trials+1, n_arms))
 
     def choose_arm(self, trial, context, pool_indices):
         """
@@ -27,9 +27,9 @@ class UCB1:
         ucbs = self.q[pool_indices] + np.sqrt(
             self.alpha * np.log(trial + 1) / self.n[pool_indices]
         )
-        # self.ucbs[trial] = ucbs
-        # self.qs[trial] = self.q[pool_indices]
-        # self.ns[trial] = self.n[pool_indices]
+        self.ucbs[trial] = ucbs
+        self.qs[trial] = self.q[pool_indices]
+        self.ns[trial] = self.n[pool_indices]
         return np.argmax(ucbs)
 
     def update(self, trial, displayed_article_index, reward, cost, context, pool_indices):
