@@ -12,6 +12,7 @@ import algorithms
 import evaluation
 
 DATA_PATH = "../dataset/synthetic/synthetic_data.pickle"
+BETA = 4.0
 
 
 def evaluate_algorithm(data_path, trials, parameters):
@@ -21,10 +22,12 @@ def evaluate_algorithm(data_path, trials, parameters):
     contexts, rewards, costs_vector = data
 
     s = time.time()
+
     policy = algorithms.Algorithm1(
         all_contexts=contexts,
         number_of_actions=rewards.shape[1],
         max_no_red_context=contexts.shape[1],
+        beta=BETA,
         **parameters,
     )
     print(f"Creation took {time.time() - s} seconds")
@@ -38,6 +41,7 @@ def evaluate_algorithm(data_path, trials, parameters):
             contexts[:trials],
             rewards[:trials],
             costs_vector[:trials],
+            beta=BETA,
             stop_after=trials,
             return_full=True,
         )
