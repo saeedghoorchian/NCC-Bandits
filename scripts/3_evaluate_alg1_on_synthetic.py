@@ -70,11 +70,6 @@ def save_results(results, trials, params):
 
 
 def validate_params(params):
-    assert "beta" in params
-    beta = params["beta"]
-    assert isinstance(beta, float)
-    assert beta >= 0.0
-
     assert "delta" in params
     delta = params["delta"]
     assert isinstance(delta, float)
