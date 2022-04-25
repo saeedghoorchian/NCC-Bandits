@@ -26,7 +26,7 @@ def evaluate_algorithm(data_path, trials, parameters):
     s = time.time()
 
     gains = np.zeros((NUM_REPETITIONS, trials))
-    rewards = np.zeros((NUM_REPETITIONS, trials))
+    rews = np.zeros((NUM_REPETITIONS, trials))
     costs = np.zeros((NUM_REPETITIONS, trials))
     for i in range(NUM_REPETITIONS):
 
@@ -56,11 +56,11 @@ def evaluate_algorithm(data_path, trials, parameters):
             print(f"Took {time.time() - s} seconds")
 
         gains[i, :] = gain
-        rewards[i, :] = rew
+        rews[i, :] = rew
         costs[i, :] = cost
 
     gain = np.mean(gains, axis=0)
-    rew = np.mean(rewards, axis=0)
+    rew = np.mean(rews, axis=0)
     cost = np.mean(costs, axis=0)
 
     return gain, rew, cost
