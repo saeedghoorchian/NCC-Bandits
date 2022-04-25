@@ -7,12 +7,14 @@ import json
 import pickle
 import time
 import warnings
+import numpy as np
 
 import algorithms
 import evaluation
 
 DATA_PATH = "../dataset/synthetic/synthetic_data.pickle"
 BETA = 4.0
+NUM_REPETITIONS = 5
 
 
 def evaluate_algorithm(data_path, trials, parameters):
@@ -23,30 +25,43 @@ def evaluate_algorithm(data_path, trials, parameters):
 
     s = time.time()
 
-    policy = algorithms.Algorithm1(
-        all_contexts=contexts,
-        number_of_actions=rewards.shape[1],
-        max_no_red_context=contexts.shape[1],
-        beta=BETA,
-        oracle_costs=True,
-        **parameters,
-    )
-    print(f"Creation took {time.time() - s} seconds")
+    gains = np.zeros((NUM_REPETITIONS, trials))
+    rewards = np.zeros((NUM_REPETITIONS, trials))
+    costs = np.zeros((NUM_REPETITIONS, trials))
+    for i in range(NUM_REPETITIONS):
 
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        s = time.time()
-        gain, rew, cost = evaluation.evaluate_on_synthetic_data(
-            policy,
-            contexts[:trials],
-            rewards[:trials],
-            costs_vector[:trials],
+        policy = algorithms.Algorithm1(
+            all_contexts=contexts,
+            number_of_actions=rewards.shape[1],
+            max_no_red_context=contexts.shape[1],
             beta=BETA,
-            stop_after=trials,
-            return_full=True,
+            oracle_costs=True,
+            **parameters,
         )
-        print(f"Took {time.time() - s} seconds")
+        print(f"Creation took {time.time() - s} seconds")
+
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            s = time.time()
+            gain, rew, cost = evaluation.evaluate_on_synthetic_data(
+                policy,
+                contexts[:trials],
+                rewards[:trials],
+                costs_vector[:trials],
+                beta=BETA,
+                stop_after=trials,
+                return_full=True,
+            )
+            print(f"Took {time.time() - s} seconds")
+
+        gains[i, :] = gain
+        rewards[i, :] = rew
+        costs[i, :] = cost
+
+    gain = np.mean(gains, axis=0)
+    rew = np.mean(rewards, axis=0)
+    cost = np.mean(costs, axis=0)
 
     return gain, rew, cost
 
