@@ -13,7 +13,7 @@ import algorithms
 import evaluation
 
 DATA_PATH = "../dataset/synthetic/synthetic_data.pickle"
-BETA = 4.0
+BETA = 1.0
 NUM_REPETITIONS = 5
 
 
