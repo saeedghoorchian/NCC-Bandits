@@ -17,9 +17,11 @@ class Algorithm1:
                  delta: float,
                  window_length: int,
                  feature_flag: bool=False,
+                 oracle_costs: bool=False,
                  ):
 
         self.feature_flag = feature_flag
+        self.oracle_costs = oracle_costs
         self.name = f"Algorithm1 (beta={beta}, delta={delta}, w={window_length})"
 
         self.time_horizon = all_contexts.shape[0]
@@ -143,12 +145,16 @@ class Algorithm1:
                 )
             )
             confidence_interval_cost_f = min(1, conf_int_before_min)
+            self.cost_conf_int[t, f] = conf_int_before_min
 
             if self.feature_flag:
                 c_tilde[f] = self.c_hat_t[f] + confidence_interval_cost_f
             else:
                 c_tilde[f] = self.c_hat_t[f] - confidence_interval_cost_f
-            self.cost_conf_int[t, f] = conf_int_before_min
+
+            if self.oracle_costs:
+                c_tilde[f] = cost_vector[f]
+
         self.c_hats[t, :] = self.c_hat_t
         self.costs[t, :] = c_tilde
 
