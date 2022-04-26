@@ -286,9 +286,11 @@ class Algorithm1:
         self.Tau_aso.append(update_tensor)
 
         tau_aso_array = np.array(self.Tau_aso)
-        self.N_t_aso = np.maximum(1, np.count_nonzero(tau_aso_array, axis=0))
+        # There is not max(1, count) for N_t_aso because in the places where it is used the case when it is 0 is
+        # considered. This is bad design, but I tried to make this consistent with SimOOS code in those parts.
+        self.N_t_aso = np.count_nonzero(tau_aso_array, axis=0)
         sum_of_window_rewards = np.tensordot(np.array(self.reward_window), tau_aso_array, axes=1)
-        self.r_hat_t = sum_of_window_rewards / self.N_t_aso
+        self.r_hat_t = sum_of_window_rewards / np.maximum(1, self.N_t_aso)
 
         # # Old unvectorized version
         # for obs in range(self.number_of_perms_SimOOS):
