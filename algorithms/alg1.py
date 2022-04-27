@@ -188,8 +188,14 @@ class Algorithm1:
 
             prob_hat = self.d_t_os[i, :z]
 
-            confidence_interval_prob = min(1, math.sqrt(
-                math.log((self.Psi_total * self.time_horizon) / self.delta) / 2 * self.N_t_o[i]))
+            # number_of_perms_SimOOS = |P(D)| in paper
+            confidence_interval_prob = min(
+                1,
+                math.sqrt(
+                    2 * self.Psi_total * math.log((2 * self.time_horizon * self.number_of_perms_SimOOS) / self.delta)
+                    / (2 * self.N_t_o[i])
+                )
+           )
 
             observation_action_in_optimization = self.all_perms[i]
 
