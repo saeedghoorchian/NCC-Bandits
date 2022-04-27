@@ -248,30 +248,17 @@ class Algorithm1:
             # Optimistic Policy Optimization
             s_t = utilities.state_extract(self.feature_values, self.all_feature_counts, context_at_t,
                                          self.observation_action_at_t)
-            # Sanity check
-            # created_context = utilities.state_create(s_t, self.feature_values)
-            # assert np.all(context_at_t == created_context)
 
-            # If some of the actions have not been chosen yet - choose them.
-            action_at_t_temp = np.argwhere(
-                self.N_t_aso[:, s_t, self.index_of_observation_action_at_t] == 0
-            )
-            # But only choose from the available pool of actions.
+            # Only actions choose from the available pool of actions. This is needed for yahoo r6a/b experiments.
             pool_indices_set = set(pool_indices)
-            action_at_t_temp_set = set(action_at_t_temp.T[0]).intersection(pool_indices_set)
 
-            if len(action_at_t_temp_set) > 0:
-                action_at_t = next(iter(action_at_t_temp_set))
-                self.random_actions += 1
+            # a_hat_t has actions sorted by their optimistic reward estimates.
+            for action in self.a_hat_t[s_t, self.index_of_observation_action_at_t]:
+                if action in pool_indices_set:
+                    action_at_t = action
+                    break
             else:
-                # If all actions have been tried - choose best possible action of all available ones.
-                # a_hat_t has actions sorted by their optimistic reward estimates.
-                for action in self.a_hat_t[s_t, self.index_of_observation_action_at_t]:
-                    if action in pool_indices_set:
-                        action_at_t = action
-                        break
-                else:
-                    raise ValueError(f"No action found at time {t}, something went wrong.")
+                raise ValueError(f"No action found at time {t}, something went wrong.")
 
             self.action_at_t = int(action_at_t)
             self.ucbs[t] = self.upsilon_t[:, s_t, self.index_of_observation_action_at_t]
