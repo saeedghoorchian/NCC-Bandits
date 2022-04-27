@@ -132,6 +132,7 @@ class Algorithm1:
         self.r_stars = np.zeros((self.time_horizon + 1, self.s_o_max_SimOOS))
         self.nus = np.zeros((self.time_horizon + 1, self.number_of_perms_SimOOS))
         self.rounds = 0
+        self.random_actions = 0
 
     def find_optimal_policy(self, t, cost_vector):
         self.rounds += 1
@@ -261,6 +262,7 @@ class Algorithm1:
 
             if len(action_at_t_temp_set) > 0:
                 action_at_t = next(iter(action_at_t_temp_set))
+                self.random_actions += 1
             else:
                 # If all actions have been tried - choose best possible action of all available ones.
                 # a_hat_t has actions sorted by their optimistic reward estimates.
