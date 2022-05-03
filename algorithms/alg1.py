@@ -148,10 +148,7 @@ class Algorithm1:
             confidence_interval_cost_f = min(1, conf_int_before_min)
             self.cost_conf_int[t, f] = conf_int_before_min
 
-            if self.feature_flag:
-                c_tilde[f] = self.c_hat_t[f] + confidence_interval_cost_f
-            else:
-                c_tilde[f] = self.c_hat_t[f] - confidence_interval_cost_f
+            c_tilde[f] = self.c_hat_t[f] - confidence_interval_cost_f
 
             if self.oracle_costs:
                 c_tilde[f] = cost_vector[f]
