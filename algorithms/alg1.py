@@ -183,6 +183,10 @@ class Algorithm1:
                 # which action has the highest UCB. This is actually the h_hat in the paper
                 self.a_hat_t[j, i] = np.argsort(self.upsilon_t[:, j, i])[::-1]  # descending sort
 
+                # Tie breaking rule - random.
+                if np.all(np.isclose(self.upsilon_t[:, j, i], self.upsilon_t[0, j, i])):
+                    np.random.shuffle(self.a_hat_t[j, i])
+
             prob_hat = self.d_t_os[i, :z]
 
             # number_of_perms_SimOOS = |P(D)| in paper
