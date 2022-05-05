@@ -12,7 +12,6 @@ import numpy as np
 import algorithms
 import evaluation
 
-DATA_PATH = "../dataset/synthetic/synthetic_data.pickle"
 BETA = 1.0
 NUM_REPETITIONS = 5
 
@@ -114,6 +113,13 @@ if __name__ == "__main__":
         help="Config file for algorithm evaluation",
     )
 
+    parser.add_argument(
+        "--data",
+        type=str,
+        required=True,
+        help="Path to pickle file with dataset"
+    )
+
     args = parser.parse_args()
 
     if args.trials < 0:
@@ -126,6 +132,6 @@ if __name__ == "__main__":
 
     validate_params(params)
 
-    results = evaluate_algorithm(DATA_PATH, args.trials, params)
+    results = evaluate_algorithm(args.data, args.trials, params)
 
     save_results(results, args.trials, params)
