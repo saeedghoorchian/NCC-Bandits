@@ -34,7 +34,6 @@ def evaluate_algorithm(data_path, trials, parameters):
             number_of_actions=rewards.shape[1],
             max_no_red_context=contexts.shape[1],
             beta=BETA,
-            oracle_costs=True,
             **parameters,
         )
         print(f"Creation took {time.time() - s} seconds")
