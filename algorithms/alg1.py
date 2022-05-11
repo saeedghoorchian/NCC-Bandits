@@ -18,10 +18,12 @@ class Algorithm1:
                  window_length: int,
                  feature_flag: bool=False,
                  oracle_costs: bool=False,
+                 costs_range: float=None,
                  ):
 
         self.feature_flag = feature_flag
         self.oracle_costs = oracle_costs
+        self.costs_range = costs_range
         self.name = f"Algorithm1 (beta={beta}, delta={delta}, w={window_length})"
 
         self.time_horizon = all_contexts.shape[0]
@@ -126,6 +128,8 @@ class Algorithm1:
         self.confidences = np.zeros((self.time_horizon + 1, self.number_of_actions))
 
         self.costs = np.zeros((self.time_horizon + 1, self.org_dim_context))
+        self.costs_plus_bound = np.zeros((self.time_horizon + 1, self.org_dim_context))
+        self.costs_minus_bound = np.zeros((self.time_horizon + 1, self.org_dim_context))
         self.c_hats = np.zeros((self.time_horizon + 1, self.org_dim_context))
         self.cost_conf_int = np.zeros((self.time_horizon + 1, self.org_dim_context))
 
@@ -145,8 +149,14 @@ class Algorithm1:
                         2 * self.N_t_f[f]
                 )
             )
-            confidence_interval_cost_f = min(1, conf_int_before_min)
+            if self.costs_range is not None:
+                confidence_interval_cost_f = min(self.costs_range, conf_int_before_min)
+            else:
+                confidence_interval_cost_f = min(1, conf_int_before_min)
             self.cost_conf_int[t, f] = conf_int_before_min
+
+            self.costs_plus_bound[t, f] = self.c_hat_t[f] + confidence_interval_cost_f
+            self.costs_minus_bound[t, f] = self.c_hat_t[f] - confidence_interval_cost_f
 
             c_tilde[f] = self.c_hat_t[f] - confidence_interval_cost_f
 
