@@ -132,6 +132,7 @@ class Algorithm1:
         self.costs_minus_bound = np.zeros((self.time_horizon + 1, self.org_dim_context))
         self.c_hats = np.zeros((self.time_horizon + 1, self.org_dim_context))
         self.cost_conf_int = np.zeros((self.time_horizon + 1, self.org_dim_context))
+        self.N_t_fs = np.zeros((self.time_horizon + 1, self.org_dim_context))
 
         self.r_stars = np.zeros((self.time_horizon + 1, self.s_o_max_SimOOS))
         self.nus = np.zeros((self.time_horizon + 1, self.number_of_perms_SimOOS))
@@ -165,6 +166,7 @@ class Algorithm1:
 
         self.c_hats[t, :] = self.c_hat_t
         self.costs[t, :] = c_tilde
+        self.N_t_fs[t, :] = self.N_t_f
 
         for i in range(self.number_of_perms_SimOOS):
 
