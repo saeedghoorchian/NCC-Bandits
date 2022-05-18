@@ -13,7 +13,7 @@ import algorithms
 import evaluation
 
 BETA = 1.0
-NUM_REPETITIONS = 5
+NUM_REPETITIONS = 3
 COSTS_RANGE_SIZE = 0.05
 
 
