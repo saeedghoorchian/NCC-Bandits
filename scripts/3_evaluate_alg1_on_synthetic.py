@@ -14,6 +14,7 @@ import evaluation
 
 BETA = 1.0
 NUM_REPETITIONS = 5
+COSTS_RANGE_SIZE = 0.05
 
 
 def evaluate_algorithm(data_path, trials, parameters):
@@ -34,6 +35,7 @@ def evaluate_algorithm(data_path, trials, parameters):
             number_of_actions=rewards.shape[1],
             max_no_red_context=contexts.shape[1],
             beta=BETA,
+            costs_range=COSTS_RANGE_SIZE,
             **parameters,
         )
         print(f"Creation took {time.time() - s} seconds")
