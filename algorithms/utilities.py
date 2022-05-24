@@ -69,7 +69,7 @@ def save_feature_values(all_contexts) -> tuple:
     for i in range(org_dim_context):
         unique_features = np.unique(all_contexts[:, i])
         # None represents not observed feature
-        values = [None] + sorted(list(unique_features))
+        values = sorted(list(unique_features))
         feature_values[i] = values
 
         feature_counts[i] = len(values)
@@ -78,7 +78,7 @@ def save_feature_values(all_contexts) -> tuple:
 
 
 def state_construct(all_feature_counts: np.array, all_contexts: np.array, one_perm: np.array) -> tuple:
-    """Count the number of partial state vectors (psi[i]) and size of state array (s_o[i]) for given observation.
+    """Count the number of partial state vectors (== s_o[i] == size of state array) for given observation.
 
     all_feature_counts: number of unique values for each feature
     all_contexts : context matrix
@@ -90,27 +90,21 @@ def state_construct(all_feature_counts: np.array, all_contexts: np.array, one_pe
                                           np.ones(org_dim_context))  # How many features observed in one_perm.
 
     s_o = 1
-    psi = 1
 
     # TODO Why is .item(0) here if its just a scalar?
     if number_of_observation_action.item(0) > 0:
         for i in range(org_dim_context):
-            # For each observed feature multiply psi by the number of its values.
-            # So psi stores how many partial vectors with support given by one_perm there can be.
-            # all_feature_counts includes None, but partial vectors can't have None as values
-            psi = psi * (all_feature_counts[i] - 1) ** (one_perm[i])
-
-            # s_o is the size of state_array for a given observation. This array is larger, as it considers
-            # None as a value for each feature.
+            # s_o is the size of state_array for a given observation. To obtain it,
+            # for each observed feature multiply s_o by the number of its values.
+            # So s_o stores how many partial vectors with support given by one_perm there can be.
             s_o = s_o * (all_feature_counts[i]) ** (one_perm[i])
 
-    psi = int(psi)
     s_o = int(s_o)
 
-    return psi, s_o
+    return  s_o
 
 
-def state_extract(feature_values, all_feature_counts, context_at_t, observation_action_at_t) -> int:
+def state_extract_old(feature_values, all_feature_counts, context_at_t, observation_action_at_t) -> int:
     """Return the state number by context and observation.
 
     Let psi_i be the set of values of feature i (stored in feature_values[i]). psi_i includes None
@@ -135,6 +129,41 @@ def state_extract(feature_values, all_feature_counts, context_at_t, observation_
     # index of given context out of all possible partial vectors
     state_index = 0
     for i in range(org_dim_context):
+        state_index *= all_feature_counts[i]
+        # index of feature value of all possible values for this feature
+        feature_index = feature_values[i].index(context_at_t[i])
+        state_index += feature_index
+
+    return int(state_index)
+
+
+def state_extract(feature_values, all_feature_counts, context_at_t, observation_action_at_t) -> int:
+    """Return the state number by context and observation.
+
+    The idea is to number different states for a given observation.
+    Let psi_i be the set of values of feature i (stored in feature_values[i]).
+    If for observation I for all observed features we multiply the psi_i's we get s_o[i] -
+    the number of possible partial vectors with support I.
+
+    This function returns the index of context_at_t, from 0 to s_o[i] - 1.
+    The idea for how to do that comes from positional number systems. We
+
+    context_at_t contains None values at those indices where observation_action_at_t is 0 - these are
+    not observed features.
+    """
+    org_dim_context = context_at_t.shape[0]
+    for feature, observation in zip(context_at_t, observation_action_at_t):
+        # Sanity check
+        if observation == 1:
+            assert feature is not None
+        else:
+            assert feature is None
+
+    # index of given context out of all states for this observation (from 0 to s_o[i]-1)
+    state_index = 0
+    for i in range(org_dim_context):
+        if not observation_action_at_t[i]:
+            continue
         state_index *= all_feature_counts[i]
         # index of feature value of all possible values for this feature
         feature_index = feature_values[i].index(context_at_t[i])

@@ -13,10 +13,8 @@ class SimOOSAlgorithm:
                  max_no_red_context: int,
                  beta_SimOOS: float,
                  delta_SimOOS: float,
-                 feature_flag: bool=False,
                  ):
 
-        self.feature_flag = feature_flag
         self.name = f"SimOOS (beta={beta_SimOOS}, delta={delta_SimOOS})"
 
         self.time_horizon = all_contexts.shape[0]
@@ -34,7 +32,6 @@ class SimOOSAlgorithm:
 
         self.number_of_perms_SimOOS = self.all_perms.shape[0]
         self.s_o = np.zeros(self.number_of_perms_SimOOS)
-        self.psi = np.zeros(self.number_of_perms_SimOOS)
 
         self.selected_context_SimOOS = np.zeros((self.time_horizon, self.org_dim_context))
         self.selected_action_SimOOS = np.zeros(self.time_horizon)
@@ -43,6 +40,7 @@ class SimOOSAlgorithm:
         self.collected_gains_SimOOS = np.zeros(self.time_horizon)
         self.collected_rewards_SimOOS = np.zeros(self.time_horizon)
         self.collected_costs_SimOOS = np.zeros(self.time_horizon)
+        self.states = np.zeros(self.time_horizon)
 
         ########################################################################################
         self.feature_values, self.all_feature_counts = utilities.save_feature_values(all_contexts)
@@ -54,11 +52,11 @@ class SimOOSAlgorithm:
 
             # s_o[i] - size of state array for a given observation action. It is bigger than psi[i] because
             # it also includes states which have None for observed features (although they are unreachable).
-            self.psi[i], self.s_o[i] = utilities.state_construct(self.all_feature_counts, all_contexts, self.all_perms[i])
+            self.s_o[i] = utilities.state_construct(self.all_feature_counts, all_contexts, self.all_perms[i])
 
         # s_o_max_SimOOS - the largest state vector for all observations, needed to create arrays.
         self.s_o_max_SimOOS = int(np.amax(self.s_o))
-        self.Psi_total = int(np.sum(self.psi))
+        self.Psi_total = int(np.sum(self.s_o))
 
         # Define the counters and variables
         # a - action, s - state (partial vector), o - observation (subset of features)
@@ -226,6 +224,8 @@ class SimOOSAlgorithm:
             self.ucbs[t] = self.upsilon_t[:, s_t, self.index_of_observation_action_at_t]
             self.rewards[t] = self.r_hat_t[:, s_t, self.index_of_observation_action_at_t]
             self.confidences[t] = self.conf1_t[:, s_t, self.index_of_observation_action_at_t]
+            self.states[t] = s_t
+
 
         return pool_indices.index(self.action_at_t)
 

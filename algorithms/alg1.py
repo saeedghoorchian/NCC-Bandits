@@ -42,7 +42,6 @@ class Algorithm1:
 
         self.number_of_perms_SimOOS = self.all_perms.shape[0]
         self.s_o = np.zeros(self.number_of_perms_SimOOS)
-        self.psi = np.zeros(self.number_of_perms_SimOOS)
 
         self.selected_context_SimOOS = np.zeros((self.time_horizon, self.org_dim_context))
         self.selected_action_SimOOS = np.zeros(self.time_horizon)
@@ -62,13 +61,13 @@ class Algorithm1:
 
             # s_o[i] - size of state array for a given observation action. It is bigger than psi[i] because
             # it also includes states which have None for observed features (although they are unreachable).
-            self.psi[i], self.s_o[i] = utilities.state_construct(self.all_feature_counts, all_contexts,
+            self.s_o[i] = utilities.state_construct(self.all_feature_counts, all_contexts,
                                                                 self.all_perms[i])
 
         # s_o = contains the number of all different states(reaqlizations) with the same observation action
         # up to "max_no_red_context" number of permitted observations.
         self.s_o_max_SimOOS = int(np.amax(self.s_o))
-        self.Psi_total = int(np.sum(self.psi))
+        self.Psi_total = int(np.sum(self.s_o))
 
         # Sliding windows and counters
         # Different Tau variables are implemented as binary vectors of len=window, for easy dot products with window.
