@@ -1,15 +1,25 @@
-import math
 import datetime
 import numpy as np
-import cvxpy as cp
 
 import algorithms.utilities as utilities
 
 
-def general(all_contexts, all_rewards, max_no_red_context, s_o_max_general):
+def get_ind_of_stationarity_period_by_t(t, stationarity_periods):
+    if t < stationarity_periods[0][0]:
+        return 0
+    if t > stationarity_periods[-1][-1]:
+        return len(stationarity_periods)-1
+    for i, period in enumerate(stationarity_periods):
+        if period[0] <= t <= period[1]:
+            return i
+    else:
+        raise ValueError(f"t={t} not found")
+
+def general(all_contexts, all_rewards, stationarity_periods, max_no_red_context, s_o_max_general):
     time_horizon = all_rewards.shape[0]
     number_of_actions = all_rewards.shape[1]
     org_dim_context = all_contexts.shape[1]
+    num_stationarity_periods = len(stationarity_periods)
 
     all_perms = utilities.perm_construct(org_dim_context, max_no_red_context)
     number_of_perms_general = all_perms.shape[0]
@@ -26,11 +36,11 @@ def general(all_contexts, all_rewards, max_no_red_context, s_o_max_general):
 
     S_Size = np.zeros(number_of_perms_general)
 
-    true_average_reward = np.zeros((number_of_perms_general, s_o_max_general, number_of_actions))
+    true_average_reward = np.zeros((num_stationarity_periods, number_of_perms_general, s_o_max_general, number_of_actions))
 
-    number_of_visits_for_average_reward = np.zeros((number_of_perms_general, s_o_max_general, number_of_actions))
+    number_of_visits_for_average_reward = np.zeros((num_stationarity_periods, number_of_perms_general, s_o_max_general, number_of_actions))
 
-    sum_of_rewards = np.zeros((number_of_perms_general, s_o_max_general, number_of_actions))
+    sum_of_rewards = np.zeros((num_stationarity_periods, number_of_perms_general, s_o_max_general, number_of_actions))
 
     for i in range(number_of_perms_general):
 
@@ -56,41 +66,46 @@ def general(all_contexts, all_rewards, max_no_red_context, s_o_max_general):
 
             true_prob_so[i, j] = number_of_unique_state_s_when_applying_perm_i[i, j] / time_horizon
 
-            all_rewards_temp = all_rewards[all_unique_state_s_when_applying_perm_i, :]
+            for per_num, period in enumerate(stationarity_periods):
+                period_slice = slice(*period)
+                all_unique_states_period = all_unique_state_s_when_applying_perm_i[period_slice]
+                all_rewards_temp = all_rewards[period_slice][all_unique_states_period, :]
 
-            for k in range(number_of_actions):
-                number_of_visits_for_average_reward[i, j, k] = all_rewards_temp[:, k].shape[0]
-                sum_of_rewards[i, j, k] = np.sum(all_rewards_temp[:, k])
+                for k in range(number_of_actions):
+                    number_of_visits_for_average_reward[per_num, i, j, k] = all_rewards_temp[:, k].shape[0]
+                    sum_of_rewards[per_num, i, j, k] = np.sum(all_rewards_temp[:, k])
 
-                true_average_reward[i, j, k] = sum_of_rewards[i, j, k] / number_of_visits_for_average_reward[i, j, k]
+                    true_average_reward[per_num, i, j, k] = sum_of_rewards[per_num, i, j, k] / number_of_visits_for_average_reward[per_num, i, j, k]
 
     return [true_prob_so, true_average_reward, S_Size]
 
 
-class SimOOS_Oracle:
-    """Fixed-I oracle policy, as defined in SimOOS paper
-    "Data-Driven Online Recommender Systems with Costly Information Acquisition"
+class Algorithm1_Oracle:
+    """This Oracle is different from SimOOS_Oracle in that it is designed to work in a piece-wise stationary
+    context. This oracle has access to true expected reward values which are piece-wise constant.
 
-    Different from SimOOS algorithm in that it has access to true probabilites of observing partial state vectors,
-    has true expected rewards for a given partial vector and arm.
-    Also for this oracle best observation is chosen and fixed for the whole time horizon.
     """
     def __init__(self,
                  all_contexts: np.array,
                  all_rewards: np.array,
-                 cost_vector: np.array,
+                 cost_means: np.array,
+                 stationarity_periods: list,
                  number_of_actions: int,
                  max_no_red_context: int,
                  beta_SimOOS: float,
                  ):
 
-        self.name = f"SimOOS-Oracle (beta={beta_SimOOS})"
+        self.name = f"Algorithm1-Oracle (beta={beta_SimOOS})"
 
         self.time_horizon = all_contexts.shape[0]
         self.org_dim_context = all_contexts.shape[1]
         self.max_no_red_context = max_no_red_context
         self.number_of_actions = number_of_actions
         self.beta_SimOOS = beta_SimOOS
+
+        self.validate_stationarity_periods(stationarity_periods)
+        self.stationarity_periods = stationarity_periods
+        self.num_stationarity_periods = len(stationarity_periods)
 
         # All possible subsets of features (I in paper)
         self.all_perms = utilities.perm_construct(self.org_dim_context, self.max_no_red_context)
@@ -131,31 +146,43 @@ class SimOOS_Oracle:
 
         # Oracle variables (not present in SimOOS)
         self.true_prob_so, self.true_average_reward, self.S_Size = general(
-            all_contexts, all_rewards, self.max_no_red_context, self.s_o_max_SimOOS
+            all_contexts, all_rewards, self.stationarity_periods, self.max_no_red_context, self.s_o_max_SimOOS
         )
 
-        self.r_star = np.zeros((self.number_of_perms_SimOOS, self.s_o_max_SimOOS))
-        self.action_star = np.zeros((self.number_of_perms_SimOOS, self.s_o_max_SimOOS))
+        self.r_star = np.zeros((self.num_stationarity_periods, self.number_of_perms_SimOOS, self.s_o_max_SimOOS))
+        self.action_star = np.zeros((self.num_stationarity_periods, self.number_of_perms_SimOOS, self.s_o_max_SimOOS))
 
-        for i in range(self.number_of_perms_SimOOS):
+        for num_per in range(self.num_stationarity_periods):
+            for i in range(self.number_of_perms_SimOOS):
 
-            for j in range(int(self.S_Size[i])):
-                self.r_star[i, j] = np.max(self.true_average_reward[i, j, :])
+                for j in range(int(self.S_Size[i])):
+                    self.r_star[num_per, i, j] = np.max(self.true_average_reward[num_per, i, j, :])
 
-                self.action_star[i, j] = np.argmax(self.true_average_reward[i, j, :])
+                    self.action_star[num_per, i, j] = np.argmax(self.true_average_reward[num_per, i, j, :])
 
-        self.value_o = np.zeros(self.number_of_perms_SimOOS)
+        self.value_o = np.zeros((self.num_stationarity_periods, self.number_of_perms_SimOOS))
+        self.index_of_observation_action_star = np.zeros(self.num_stationarity_periods, dtype=int)
+        self.selected_observation_action_at_t = np.zeros((self.num_stationarity_periods, self.org_dim_context))
 
-        for i in range(self.number_of_perms_SimOOS):
-            self.value_o[i] = self.beta_SimOOS * np.dot(self.true_prob_so[i, :], self.r_star[i, :]) - np.dot(self.all_perms[i],
-                                                                                                cost_vector)
 
-        self.index_of_observation_action_star = np.argmax(self.value_o)
+        for num_per in range(self.num_stationarity_periods):
+            for i in range(self.number_of_perms_SimOOS):
+                self.value_o[num_per, i] = self.beta_SimOOS * np.dot(
+                    self.true_prob_so[i, :], self.r_star[num_per, i, :]
+                ) - np.dot(self.all_perms[i], cost_means[num_per])
 
-        self.selected_observation_action_at_t = self.all_perms[self.index_of_observation_action_star]
+            self.index_of_observation_action_star[num_per] = int(np.argmax(self.value_o[num_per, :]))
+            self.selected_observation_action_at_t[num_per, :] = self.all_perms[self.index_of_observation_action_star[num_per]]
+
+    def validate_stationarity_periods(self, stationarity_periods):
+        assert stationarity_periods == sorted(stationarity_periods)
+
+        for l, r in zip(stationarity_periods, stationarity_periods[1:]):
+            assert l[1] == r[0]
 
     def choose_features_to_observe(self, t, feature_indices, cost_vector):
-        self.observation_action_at_t = self.selected_observation_action_at_t
+        num_per = get_ind_of_stationarity_period_by_t(t, self.stationarity_periods)
+        self.observation_action_at_t = self.selected_observation_action_at_t[num_per]
         return [ind for ind, value in enumerate(self.observation_action_at_t) if value]
 
     def choose_arm(self, t: int, context_at_t: np.array, pool_indices: list):
@@ -166,22 +193,25 @@ class SimOOS_Oracle:
             context_at_t: user context at time t. One for each trial, arms don't have contexts.
             pool_indices: indices of arms available at time t.
         """
+        num_per = get_ind_of_stationarity_period_by_t(t, self.stationarity_periods)
         s_t = utilities.state_extract(self.feature_values, self.all_feature_counts, context_at_t, self.observation_action_at_t)
         self.states[t] = s_t
-        self.true_average_rewards[t, :] = self.true_average_reward[self.index_of_observation_action_star, s_t]
+        self.true_average_rewards[t, :] = self.true_average_reward[num_per, self.index_of_observation_action_star[num_per], s_t]
 
-        self.action_at_t = int(self.action_star[self.index_of_observation_action_star, s_t])
+        self.action_at_t = int(self.action_star[num_per, self.index_of_observation_action_star[num_per], s_t])
         return pool_indices.index(self.action_at_t)
 
     def update(self, t, action_index_at_t, reward_at_t, cost_vector_at_t, context_at_t, pool_indices):
         if t % 500 == 0:
             print(f"Trial {t}, time {datetime.datetime.now()}")
 
+        num_per = get_ind_of_stationarity_period_by_t(t, self.stationarity_periods)
+
         cost_at_t = np.dot(cost_vector_at_t, self.observation_action_at_t)
 
         action_at_t = pool_indices[action_index_at_t]
 
-        self.selected_context_SimOOS[t, :] = self.selected_observation_action_at_t
+        self.selected_context_SimOOS[t, :] = self.selected_observation_action_at_t[num_per]
 
         self.all_gain_SimOOS[t + 1] = self.all_gain_SimOOS[t] + reward_at_t - cost_at_t
 

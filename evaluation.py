@@ -155,6 +155,7 @@ def evaluate_on_synthetic_data(
     cumulative_reward = []  # contains cumulative reward for each trial
     cumulative_cost = []  # contains cumulative cost for each trial
     cumulative_gain = []  # contains cumulative gain for each trial
+    chosen_arms = []  # contains arms chosen in each trial
 
     for trial in range(num_trials):
 
@@ -176,6 +177,7 @@ def evaluate_on_synthetic_data(
             trial, observed_features, pool_indices
         )
         chosen_arm = pool_indices[chosen_arm_index]
+        chosen_arms.append(chosen_arm)
 
         cost_at_t = sum(cost_vector_at_t[features_to_observe])
         total_cost += cost_at_t
@@ -220,7 +222,7 @@ def evaluate_on_synthetic_data(
     )
 
     if return_full:
-        return cumulative_gain, cumulative_reward, cumulative_cost
+        return cumulative_gain, cumulative_reward, cumulative_cost, chosen_arms
     else:
         return cumulative_gain
 
