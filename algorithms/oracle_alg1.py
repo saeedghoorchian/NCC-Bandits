@@ -75,7 +75,9 @@ def general(all_contexts, all_rewards, stationarity_periods, max_no_red_context,
                     number_of_visits_for_average_reward[per_num, i, j, k] = all_rewards_temp[:, k].shape[0]
                     sum_of_rewards[per_num, i, j, k] = np.sum(all_rewards_temp[:, k])
 
-                    true_average_reward[per_num, i, j, k] = sum_of_rewards[per_num, i, j, k] / number_of_visits_for_average_reward[per_num, i, j, k]
+                    true_average_reward[per_num, i, j, k] = (
+                        sum_of_rewards[per_num, i, j, k] / (number_of_visits_for_average_reward[per_num, i, j, k] or 1)
+                    )
 
     return [true_prob_so, true_average_reward, S_Size]
 
@@ -144,7 +146,7 @@ class Algorithm1_Oracle:
         self.s_o_max_SimOOS = int(np.amax(self.s_o))
         self.Psi_total = int(np.sum(self.s_o))
 
-        # Oracle variables (not present in SimOOS)
+        # Oracle variables (not present in SimOOS or Alg1)
         self.true_prob_so, self.true_average_reward, self.S_Size = general(
             all_contexts, all_rewards, self.stationarity_periods, self.max_no_red_context, self.s_o_max_SimOOS
         )
