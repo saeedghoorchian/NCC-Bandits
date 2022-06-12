@@ -145,8 +145,8 @@ class Algorithm1:
         c_tilde = np.zeros(self.org_dim_context)
         for f in range(self.org_dim_context):
             conf_int_before_min = math.sqrt(
-                math.log((self.org_dim_context * self.w * self.time_horizon) / self.delta) / (
-                        2 * self.N_t_f[f]
+                2 * math.log((self.org_dim_context * self.w * self.time_horizon) / self.delta) / (
+                        self.N_t_f[f]
                 )
             )
             if self.costs_range is not None:
@@ -184,7 +184,7 @@ class Algorithm1:
                     else:
                         confidence_interval_reward = min(1, math.sqrt(
                             math.log((self.number_of_actions * self.Psi_total * self.w * self.time_horizon) / self.delta) / (
-                                    2 * self.N_t_aso[k, j, i])))
+                                    self.N_t_aso[k, j, i])))
                         self.upsilon_t[k, j, i] = self.r_hat_t[k, j, i] + confidence_interval_reward
 
                     self.conf1_t[k, j, i] = confidence_interval_reward
@@ -205,7 +205,7 @@ class Algorithm1:
                 1,
                 math.sqrt(
                     2 * self.Psi_total * math.log((2 * self.time_horizon * self.number_of_perms_SimOOS) / self.delta)
-                    / (2 * self.N_t_o[i])
+                    / (self.N_t_o[i])
                 )
            )
 
