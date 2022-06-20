@@ -1,5 +1,6 @@
 import sys
-sys.path.append('..')
+
+sys.path.append("..")
 
 
 import gc
@@ -18,7 +19,7 @@ def main():
             "../dataset/r6b/ydata-fp-td-clicks-v2_0.20111005",
             "../dataset/r6b/ydata-fp-td-clicks-v2_0.20111006",
         ],
-        filtered_ids=()
+        filtered_ids=(),
     )
     print(f"Events: {len(large_data.events)}, articles: {len(large_data.articles)}")
 

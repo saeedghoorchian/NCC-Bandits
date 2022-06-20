@@ -1,6 +1,6 @@
 import sys
 
-sys.path.append('..')
+sys.path.append("..")
 
 import argparse
 import json
@@ -21,11 +21,7 @@ NUM_BINS = 4
 def preprocess_data(raw_data):
     """Preprocess R6A data by discretizing user feature values"""
     s = time.time()
-    X = np.stack(
-        [
-            ev.user_features for ev in raw_data.events
-        ]
-    )
+    X = np.stack([ev.user_features for ev in raw_data.events])
     X_disc = np.ones(X.shape, dtype=np.single)
 
     for column in range(6):
@@ -80,7 +76,9 @@ def save_results(results, trials, params):
 
     policy = "alg1"
 
-    with open(f"results/results_r6a_{policy}_t_{trials}_{params_string}.pickle", "wb") as f:
+    with open(
+        f"results/results_r6a_{policy}_t_{trials}_{params_string}.pickle", "wb"
+    ) as f:
         pickle.dump(ctr, f)
 
     with open(f"results/results_r6a_{policy}_t_{trials}_{params_string}.txt", "w") as f:

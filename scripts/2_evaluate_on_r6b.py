@@ -1,5 +1,6 @@
 import sys
-sys.path.append('..')
+
+sys.path.append("..")
 
 import argparse
 import json
@@ -11,7 +12,7 @@ DATA_PATH = "../dataset/r6b/subsample/data_large.pickle"
 
 
 def save_results(evaluation_results, config_file, t):
-    config_name = config_file.split('/')[-1].split('.')[0]
+    config_name = config_file.split("/")[-1].split(".")[0]
     with open(f"results/results_{config_name}_t_{t}.pickle", "wb") as f:
         pickle.dump(evaluation_results, f)
 

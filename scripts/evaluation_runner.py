@@ -1,5 +1,6 @@
 import sys
-sys.path.append('..')
+
+sys.path.append("..")
 
 import gc
 import json
@@ -41,4 +42,6 @@ def run_evaluation(trials, data_file, config_file):
             params_list = [{}]
         for params in params_list:
 
-            bandit_alg = get_bandit_object(bandit_name, params, data.n_arms, len(data.events[0].user_features))
+            bandit_alg = get_bandit_object(
+                bandit_name, params, data.n_arms, len(data.events[0].user_features)
+            )

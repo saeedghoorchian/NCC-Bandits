@@ -4,7 +4,7 @@ import numpy as np
 def discretize(array, num_bins):
     x_min = min(array)
     x_max = max(array)
-    bins = np.linspace(x_min, x_max, num_bins+1)
+    bins = np.linspace(x_min, x_max, num_bins + 1)
     new_array = array.copy()
     for i in range(len(array)):
         x = array[i]

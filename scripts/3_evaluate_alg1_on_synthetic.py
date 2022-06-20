@@ -1,6 +1,6 @@
 import sys
 
-sys.path.append('..')
+sys.path.append("..")
 
 import argparse
 import json
@@ -39,7 +39,6 @@ def evaluate_algorithm(data_path, trials, parameters):
             **parameters,
         )
         print(f"Creation took {time.time() - s} seconds")
-
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -115,10 +114,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--data",
-        type=str,
-        required=True,
-        help="Path to pickle file with dataset"
+        "--data", type=str, required=True, help="Path to pickle file with dataset"
     )
 
     args = parser.parse_args()
