@@ -10,7 +10,7 @@ import warnings
 import numpy as np
 
 import algorithms
-import evaluation
+from src import evaluation
 
 BETA = 1.0
 NUM_REPETITIONS = 3
