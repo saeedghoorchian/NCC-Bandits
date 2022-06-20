@@ -1,9 +1,7 @@
-import math
 import datetime
 import numpy as np
-import cvxpy as cp
 
-import algorithms.utilities as utilities
+from src.algorithms import utilities
 
 
 def general(all_contexts, all_rewards, max_no_red_context, s_o_max_general):

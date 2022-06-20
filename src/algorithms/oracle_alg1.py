@@ -1,7 +1,8 @@
 import datetime
 import numpy as np
 
-import algorithms.utilities as utilities
+from src.algorithms import utilities
+
 
 
 def get_ind_of_stationarity_period_by_t(t, stationarity_periods):

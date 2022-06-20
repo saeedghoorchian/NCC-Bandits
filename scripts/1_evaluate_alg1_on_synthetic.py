@@ -9,7 +9,7 @@ import time
 import warnings
 import numpy as np
 
-import algorithms
+from src import algorithms
 from src import evaluation
 
 BETA = 1.0

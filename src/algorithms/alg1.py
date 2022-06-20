@@ -4,7 +4,7 @@ import datetime
 import numpy as np
 import cvxpy as cp
 
-import algorithms.utilities as utilities
+from src.algorithms import utilities
 
 
 class Algorithm1:
