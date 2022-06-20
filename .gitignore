@@ -1,9 +1,8 @@
 dataset/*
 .ipynb_checkpoints/*
 experiments/.ipynb_checkpoints/*
-experiments/R6A/.ipynb_checkpoints/*
-experiments/R6B/.ipynb_checkpoints/*
 .DS_Store
+.idea/*
 __pycache__/*
 *.pickle
 *.pdf
