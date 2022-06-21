@@ -11,8 +11,8 @@ class SimOOSAlgorithm:
                  all_contexts: np.array,
                  number_of_actions: int,
                  max_no_red_context: int,
-                 beta_SimOOS: float,
                  delta_SimOOS: float,
+                 beta_SimOOS: float = 1.0,
                  ):
 
         self.name = f"SimOOS (beta={beta_SimOOS}, delta={delta_SimOOS})"
@@ -148,7 +148,7 @@ class SimOOSAlgorithm:
             prob_tilde = cp.Variable(z)
 
             objective = cp.Maximize(
-                (self.beta_SimOOS * (np.array(F[i]) * prob_tilde))
+                (self.beta_SimOOS * (np.array(F[i]) @ prob_tilde))
                 - np.dot(observation_action_in_optimization, cost_vector)
             )
 
@@ -231,7 +231,7 @@ class SimOOSAlgorithm:
 
     def update(self, t, action_index_at_t, reward_at_t, cost_vector_at_t, context_at_t, pool_indices):
 
-        if t % 500 == 0:
+        if t % 1000 == 0:
             print(f"Trial {t}, time {datetime.datetime.now()}")
 
         cost_at_t = np.dot(cost_vector_at_t, self.observation_action_at_t)

@@ -13,9 +13,9 @@ class Algorithm1:
                  all_contexts: np.array,
                  number_of_actions: int,
                  max_no_red_context: int,
-                 beta: float,
                  delta: float,
                  window_length: int,
+                 beta: float = 1.0,
                  feature_flag: bool=False,
                  oracle_costs: bool=False,
                  costs_range: float=None,
@@ -215,7 +215,7 @@ class Algorithm1:
             prob_tilde = cp.Variable(z)
 
             objective = cp.Maximize(
-                (self.beta * (np.array(r_star[i]) * prob_tilde))
+                (self.beta * (np.array(r_star[i]) @ prob_tilde))
                 - np.dot(observation_action_in_optimization, c_tilde)
             )
 
@@ -318,7 +318,7 @@ class Algorithm1:
         #             self.r_hat_t[a, state, obs] = sum_of_window_rewards / self.N_t_aso[a][state][obs]
 
     def update(self, t, action_index_at_t, reward_at_t, cost_vector_at_t, context_at_t, pool_indices):
-        if t % 500 == 0:
+        if t % 1000 == 0:
             print(f"Round {t}, time {datetime.datetime.now()}")
 
         cost_at_t = np.dot(cost_vector_at_t, self.observation_action_at_t)
