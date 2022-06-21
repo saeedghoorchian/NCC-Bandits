@@ -21,7 +21,7 @@ class UCB1:
 
     def choose_arm(self, trial, context, pool_indices):
         """
-        Returns the best arm's index relative to the pool
+        Returns the best arm's index relative to the pool of indices
         """
 
         ucbs = self.q[pool_indices] + np.sqrt(
@@ -45,5 +45,5 @@ class UCB1:
         ]
 
     def choose_features_to_observe(self, trial, feature_indices, cost_vector):
-        # UCB1 has no feature selection so it uses all available features.
+        # UCB1 observes no features.
         return []

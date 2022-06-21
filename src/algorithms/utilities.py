@@ -244,3 +244,43 @@ def generate_substates(partial_vector: np.array, observation: np.array) -> tuple
         substate_vector = get_substate(partial_vector, substate_obs)
         substates[i, :] = substate_vector
     return substates, substate_observations
+
+
+def get_histograms(arms_list, regions):
+    arms = np.array(arms_list)
+    n_arms = len(np.unique(arms))
+    n_regions = len(regions)
+    histograms = np.zeros((n_regions, n_arms))
+    for i, region in enumerate(regions):
+        arms_in_region = arms[slice(*region)]
+        region_histogram = np.zeros(n_arms)
+        for arm in range(n_arms):
+            region_histogram[arm] = np.count_nonzero(arms_in_region == arm)
+        histograms[i, :] = region_histogram
+
+    return histograms
+
+
+def get_accuracy(alg1_object):
+    N_FEATURES = alg1_object.max_no_red_context
+    counts = np.zeros(N_FEATURES + 1, dtype=int)
+    rewards = np.zeros(N_FEATURES + 1, dtype=int)
+    accuracies = np.zeros(N_FEATURES + 1)
+
+    T = len(alg1_object.selected_context_SimOOS)
+
+    # for each l what happens when we observe up to l features
+    for l in range(len(counts)):
+        for j in range(l + 1):
+            for t in range(T):
+                observation = alg1_object.selected_context_SimOOS[t, :]
+                reward = alg1_object.collected_rewards_SimOOS[t]
+                num_observed = np.count_nonzero(observation)
+
+                indicator = 1 if (num_observed == j) else 0
+                counts[l] += indicator
+                rewards[l] += reward * indicator
+
+    for l in range(len(accuracies)):
+        accuracies[l] = rewards[l] / counts[l] if counts[l] != 0 else 0
+    return accuracies

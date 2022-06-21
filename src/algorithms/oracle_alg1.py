@@ -95,7 +95,7 @@ class Algorithm1_Oracle:
                  stationarity_periods: list,
                  number_of_actions: int,
                  max_no_red_context: int,
-                 beta_SimOOS: float,
+                 beta_SimOOS: float = 1.0,
                  ):
 
         self.name = f"Algorithm1-Oracle (beta={beta_SimOOS})"
@@ -205,8 +205,6 @@ class Algorithm1_Oracle:
         return pool_indices.index(self.action_at_t)
 
     def update(self, t, action_index_at_t, reward_at_t, cost_vector_at_t, context_at_t, pool_indices):
-        if t % 500 == 0:
-            print(f"Trial {t}, time {datetime.datetime.now()}")
 
         num_per = get_ind_of_stationarity_period_by_t(t, self.stationarity_periods)
 
