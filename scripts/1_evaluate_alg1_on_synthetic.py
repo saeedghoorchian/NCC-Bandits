@@ -33,7 +33,7 @@ def evaluate_algorithm(data_path, trials, parameters):
         policy = algorithms.Algorithm1(
             all_contexts=contexts,
             number_of_actions=rewards.shape[1],
-            max_no_red_context=contexts.shape[1],
+            max_num_observations=contexts.shape[1],
             beta=BETA,
             costs_range=COSTS_RANGE_SIZE,
             **parameters,

@@ -2,6 +2,15 @@ import numpy as np
 
 
 class LinUCB:
+    """LinUCB algorithm under the disjoint payoff model.
+
+    A Contextual multi-armed bandit algorithm designed under the assumption of linear rewards.
+    Designed for stationary rewards. Does not implement feature selection.
+
+    From paper:
+    "A Contextual-Bandit Approach to Personalized News Article Recommendation"
+    Li et al. 2011
+    """
     def __init__(self, n_trials: int, context_dimension: int, n_arms: int, alpha: float):
         self.context_dimension = context_dimension
         # alpha parameter controls how large the ucb is, larger alpha means more exploration

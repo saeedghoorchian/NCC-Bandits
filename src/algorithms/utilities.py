@@ -26,21 +26,21 @@ def full_perm_construct(size: int) -> np.array:
     return all_perms
 
 
-def perm_construct(org_dim_context: int, max_no_red_context: int) -> np.array:
-    """Computes all possible observation actions(permutations) for org_dim_context sources(features).
+def perm_construct(context_dimensionality: int, max_num_observations: int) -> np.array:
+    """Computes all possible observation actions(permutations) for context_dimensionality sources(features).
 
-     max_no_red_context is the maximum number of sources that can be selected.
+     max_num_observations is the maximum number of sources that can be selected.
     """
 
     # If all permutations are needed - a quicker procedure is available.
-    if org_dim_context == max_no_red_context:
-        return full_perm_construct(org_dim_context)
+    if context_dimensionality == max_num_observations:
+        return full_perm_construct(context_dimensionality)
 
-    for i in range(0, max_no_red_context + 1):
+    for i in range(0, max_num_observations + 1):
 
         temp1 = np.array([1 for j in range(i)])
 
-        temp2 = np.array([0 for j in range(org_dim_context - i)])
+        temp2 = np.array([0 for j in range(context_dimensionality - i)])
 
         temp_together = np.concatenate((temp1, temp2))
 
@@ -62,11 +62,11 @@ def save_feature_values(all_contexts) -> tuple:
     This is used in SimOOS and similar algorithms to enumerate all possible states and get index of state from
     observed context (state = partial vector in paper).
     """
-    org_dim_context = all_contexts.shape[1]
+    context_dimensionality = all_contexts.shape[1]
     feature_values = defaultdict(list)
-    feature_counts = np.zeros(org_dim_context)
+    feature_counts = np.zeros(context_dimensionality)
 
-    for i in range(org_dim_context):
+    for i in range(context_dimensionality):
         unique_features = np.unique(all_contexts[:, i])
         # None represents not observed feature
         values = sorted(list(unique_features))
@@ -85,15 +85,14 @@ def state_construct(all_feature_counts: np.array, all_contexts: np.array, one_pe
     one_perm : observation action
     all_feature_counts[i] : number of possible i-type context values
     """
-    org_dim_context = all_contexts.shape[1]
+    context_dimensionality = all_contexts.shape[1]
     number_of_observation_action = np.dot(one_perm,
-                                          np.ones(org_dim_context))  # How many features observed in one_perm.
+                                          np.ones(context_dimensionality))  # How many features observed in one_perm.
 
     s_o = 1
 
-    # TODO Why is .item(0) here if its just a scalar?
     if number_of_observation_action.item(0) > 0:
-        for i in range(org_dim_context):
+        for i in range(context_dimensionality):
             # s_o is the size of state_array for a given observation. To obtain it,
             # for each observed feature multiply s_o by the number of its values.
             # So s_o stores how many partial vectors with support given by one_perm there can be.
@@ -101,7 +100,7 @@ def state_construct(all_feature_counts: np.array, all_contexts: np.array, one_pe
 
     s_o = int(s_o)
 
-    return  s_o
+    return s_o
 
 
 def state_extract_old(feature_values, all_feature_counts, context_at_t, observation_action_at_t) -> int:
@@ -118,7 +117,7 @@ def state_extract_old(feature_values, all_feature_counts, context_at_t, observat
     context_at_t contains None values at those indices where observation_action_at_t is 0 - these are
     not observed features.
     """
-    org_dim_context = context_at_t.shape[0]
+    context_dimensionality = context_at_t.shape[0]
     for feature, observation in zip(context_at_t, observation_action_at_t):
         # Sanity check
         if observation == 1:
@@ -128,7 +127,7 @@ def state_extract_old(feature_values, all_feature_counts, context_at_t, observat
 
     # index of given context out of all possible partial vectors
     state_index = 0
-    for i in range(org_dim_context):
+    for i in range(context_dimensionality):
         state_index *= all_feature_counts[i]
         # index of feature value of all possible values for this feature
         feature_index = feature_values[i].index(context_at_t[i])
@@ -151,7 +150,7 @@ def state_extract(feature_values, all_feature_counts, context_at_t, observation_
     context_at_t contains None values at those indices where observation_action_at_t is 0 - these are
     not observed features.
     """
-    org_dim_context = context_at_t.shape[0]
+    context_dimensionality = context_at_t.shape[0]
     for feature, observation in zip(context_at_t, observation_action_at_t):
         # Sanity check
         if observation == 1:
@@ -161,7 +160,7 @@ def state_extract(feature_values, all_feature_counts, context_at_t, observation_
 
     # index of given context out of all states for this observation (from 0 to s_o[i]-1)
     state_index = 0
-    for i in range(org_dim_context):
+    for i in range(context_dimensionality):
         if not observation_action_at_t[i]:
             continue
         state_index *= all_feature_counts[i]
@@ -177,10 +176,10 @@ def state_create(state_index, feature_values):
 
     Not used in algorithms, only here for testing purposes.
     """
-    org_dim_context = len(feature_values)
+    context_dimensionality = len(feature_values)
 
-    context = np.zeros(org_dim_context)
-    for i in reversed(range(org_dim_context)):
+    context = np.zeros(context_dimensionality)
+    for i in reversed(range(context_dimensionality)):
         feature_count = len(feature_values[i])
         feature_index = state_index % feature_count
         context[i] = feature_values[i][feature_index]
@@ -262,19 +261,25 @@ def get_histograms(arms_list, regions):
 
 
 def get_accuracy(alg1_object):
-    N_FEATURES = alg1_object.max_no_red_context
+    """Compute vector of accuracies as defined in paper (not the usual accuracy)
+
+    Element i is accuracy when observing up to i features.
+    This function works for Algorithm1, SimOOS, Algorithm1-Oracle and SimOOS-Oracle.
+    """
+
+    N_FEATURES = alg1_object.max_num_observations
     counts = np.zeros(N_FEATURES + 1, dtype=int)
     rewards = np.zeros(N_FEATURES + 1, dtype=int)
     accuracies = np.zeros(N_FEATURES + 1)
 
-    T = len(alg1_object.selected_context_SimOOS)
+    T = len(alg1_object.selected_context)
 
     # for each l what happens when we observe up to l features
     for l in range(len(counts)):
         for j in range(l + 1):
             for t in range(T):
-                observation = alg1_object.selected_context_SimOOS[t, :]
-                reward = alg1_object.collected_rewards_SimOOS[t]
+                observation = alg1_object.selected_context[t, :]
+                reward = alg1_object.collected_rewards[t]
                 num_observed = np.count_nonzero(observation)
 
                 indicator = 1 if (num_observed == j) else 0
