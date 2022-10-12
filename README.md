@@ -21,7 +21,7 @@ cd costly_nonstationary_bandits
 
 #### Setup the environment:
 
-The [environment.yml](https://github.com/SaeedGhoorchian/costly_nonstationary_bandits/blob/main/environment.yml)
+The [environment.yml](https://github.com/guchis/costly_nonstationary_bandits/blob/main/environment.yml)
 file describes the list of library dependencies. For a fast and easy way to setup the environment we encourage you to 
 use [Conda](https://docs.conda.io/en/latest/miniconda.html). Use the following commands to install the dependencies in
 a new conda environment and activate it:
