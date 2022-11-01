@@ -7,7 +7,8 @@ The source code includes:
 [LinUCB](https://github.com/SaeedGhoorchian/costly_nonstationary_bandits/blob/main/src/algorithms/linucb.py), 
 [PS-LinUCB](https://github.com/SaeedGhoorchian/costly_nonstationary_bandits/blob/main/src/algorithms/ps_linucb.py),
 [Sim-OOS](https://github.com/SaeedGhoorchian/costly_nonstationary_bandits/blob/main/src/algorithms/sim_oos.py).
-* Experiments on the UCI Nursery dataset (https://archive.ics.uci.edu/ml/datasets/nursery)
+* [Experiments](https://github.com/SaeedGhoorchian/costly_nonstationary_bandits/blob/main/experiments/nursery) 
+on the UCI Nursery dataset (https://archive.ics.uci.edu/ml/datasets/nursery).
 
 You can use this repository to reproduce our results or try other algorithms, datasets or settings.
  
@@ -30,7 +31,7 @@ conda env create -f environment.yml
 conda activate costly_nonstationary_bandits
 ```
 
-#### Reproducing the experiments:
+#### Reproduce the experiments:
 
 Run the notebook
 [reproducing/reproducing_nursery.ipynb](https://github.com/SaeedGhoorchian/costly_nonstationary_bandits/blob/main/reproducing/reproducing_nursery.ipynb)
