@@ -39,6 +39,6 @@ to reproduce the experiments and figures from the paper.
 
 This notebook should serve as an entry point for understanding the data and the code used in the paper.
 It consists of three parts:
-* Preparing the dataset. This includes preprocessing and introducing costs and non-stationarity.
+* Preparing the dataset. This includes preprocessing it to fit MAB setting, introducing costs and non-stationarity.
 * Evaluating all the bandit algorithms in a simulated environment using the prepared data.
 * Plotting the figures using the evaluation data.
