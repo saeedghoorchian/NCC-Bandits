@@ -6,4 +6,5 @@ from src.algorithms.oracle_simoos import SimOOS_Oracle
 from src.algorithms.ps_linucb import PSLinUCB
 from src.algorithms.random_policy import RandomPolicy
 from src.algorithms.sim_oos import SimOOSAlgorithm
+from src.algorithms.sw_ucb import SW_UCB
 from src.algorithms.ucb import UCB1
